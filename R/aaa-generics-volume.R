@@ -15,6 +15,14 @@ get_vox2fsl <- function(shape, pixdim, vox2ras) {
   voxToScaledVoxMat
 }
 
+get_vox2ras_tkr <- function(vox2ras, crs_c) {
+  # Torig <- cbind(Norig[, 4], -Norig[, 4] %*% header$internal$Pcrs_c)
+  vox2ras_tkr <- vox2ras[1:3, 1:3]
+  vox2ras_tkr <- cbind(vox2ras_tkr, - vox2ras_tkr %*% crs_c[1:3])
+  vox2ras_tkr <- rbind(vox2ras_tkr, c(0, 0, 0, 1))
+  vox2ras_tkr
+}
+
 
 new_volume <- function(type, header, transforms, data, shape) {
   use_expression <- FALSE
@@ -169,6 +177,11 @@ names.ieegio_volume <- function(x) {
 #' @param vox2ras a \code{4x4} transform matrix from voxel indexing (column,
 #' row, slice) to scanner (often 'T1-weighted' image) 'RAS'
 #' (right-anterior-superior) coordinate
+#' @param gzipped for writing \code{'nii'} data: whether the file needs to be
+#' compressed; default is inferred from the file name. When the file ends
+#' with \code{'nii'}, then no compression is used; otherwise the file will
+#' be compressed. If the file name does not end with \code{'nii'} nor
+#' \code{'nii.gz'}, then the file extension will be added automatically.
 #' @param ... passed to other methods
 #' @returns imaging readers return \code{ieegio_volume} objects.
 #'
@@ -245,9 +258,9 @@ read_volume <- function(file, header_only = FALSE,
   if( format == "auto" ) {
     fname <- tolower(basename(file))
     if( endsWith(fname, "mgh") || endsWith(fname, "mgz") ) {
-      fname <- "mgh"
+      format <- "mgh"
     } else {
-      fname <- "nifti"
+      format <- "nifti"
     }
   }
 

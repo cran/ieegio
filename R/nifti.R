@@ -61,8 +61,9 @@ io_read_nii <- function(file, method = c("oro", "rnifti", "ants"), header_only =
       }
 
       # vox2ras_tkr
-      vox2ras_tkr <- vox2ras
-      vox2ras_tkr[1:3, 4] <- - shape[1:3] / 2
+      # vox2ras_tkr <- vox2ras
+      # vox2ras_tkr[1:3, 4] <- - vox2ras[1:3, 1:3] %*% shape[1:3] / 2
+      vox2ras_tkr <- get_vox2ras_tkr(vox2ras, shape / 2)
 
       # vox2fsl
       vox2fsl <- get_vox2fsl(shape = shape, pixdim = pixdim, vox2ras = vox2ras)
@@ -74,7 +75,7 @@ io_read_nii <- function(file, method = c("oro", "rnifti", "ants"), header_only =
       )
 
       return(new_volume(
-        type = c("rnifti", "nifti"),
+        type = c("oro", "nifti"),
         header = volume,
         transforms = transforms,
         data = data,
@@ -110,8 +111,9 @@ io_read_nii <- function(file, method = c("oro", "rnifti", "ants"), header_only =
       }
 
       # vox2ras_tkr
-      vox2ras_tkr <- vox2ras
-      vox2ras_tkr[1:3, 4] <- - shape[1:3] / 2
+      # vox2ras_tkr <- vox2ras
+      # vox2ras_tkr[1:3, 4] <- - vox2ras[1:3, 1:3] %*% shape[1:3] / 2
+      vox2ras_tkr <- get_vox2ras_tkr(vox2ras, shape / 2)
 
       # vox2fsl
       vox2fsl <- get_vox2fsl(shape = shape, pixdim = pixdim, vox2ras = vox2ras)
@@ -123,7 +125,7 @@ io_read_nii <- function(file, method = c("oro", "rnifti", "ants"), header_only =
       )
 
       return(new_volume(
-        type = c("oro", "nifti"),
+        type = c("rnifti", "nifti"),
         header = volume,
         transforms = transforms,
         shape = shape,
@@ -137,6 +139,13 @@ io_read_nii <- function(file, method = c("oro", "rnifti", "ants"), header_only =
 
     },
     "ants" = {
+      if(!rpyANTs::ants_available(module = "ants")) {
+        if(dir.exists(rpymat::env_path())) {
+          rpyANTs::install_ants(python_ver = "auto")
+        } else {
+          rpyANTs::install_ants()
+        }
+      }
       volume <- rpyANTs::as_ANTsImage(file, ...)
       header <- volume
       shape <- unlist(rpymat::py_to_r(volume$shape))
@@ -149,8 +158,9 @@ io_read_nii <- function(file, method = c("oro", "rnifti", "ants"), header_only =
       attr(vox2ras, "which_xform") <- "qform"
 
       # vox2ras_tkr
-      vox2ras_tkr <- vox2ras
-      vox2ras_tkr[1:3, 4] <- - shape[1:3] / 2
+      # vox2ras_tkr <- vox2ras
+      # vox2ras_tkr[1:3, 4] <- - vox2ras[1:3, 1:3] %*% shape[1:3] / 2
+      vox2ras_tkr <- get_vox2ras_tkr(vox2ras, shape / 2)
 
       # vox2fsl
       vox2fsl <- get_vox2fsl(shape = shape, pixdim = pixdim, vox2ras = vox2ras)
@@ -179,6 +189,7 @@ io_write_nii <- function(x, con, ...) {
   UseMethod("io_write_nii")
 }
 
+#' @rdname imaging-volume
 #' @export
 io_write_nii.ieegio_nifti <- function(x, con, ...) {
   if(.subset2(x, "header_only")) {
@@ -187,25 +198,36 @@ io_write_nii.ieegio_nifti <- function(x, con, ...) {
   io_write_nii(x = x$header, con = con, ...)
 }
 
+#' @rdname imaging-volume
 #' @export
 io_write_nii.ants.core.ants_image.ANTsImage <- function(x, con, ...) {
   con <- normalizePath(con, winslash = "/", mustWork = FALSE)
   x$to_file(con)
+  normalizePath(con)
 }
 
+#' @rdname imaging-volume
 #' @export
 io_write_nii.niftiImage <- function(x, con, ...) {
   RNifti::writeNifti(image = x, file = con, ...)
 }
 
+#' @rdname imaging-volume
 #' @export
-io_write_nii.nifti <- function(x, con, ...) {
+io_write_nii.nifti <- function(x, con, gzipped = NA, ...) {
+  if(is.na(gzipped)) {
+    gzipped <- TRUE
+  }
   if(grepl("\\.(nii|nii\\.gz)$", con, ignore.case = TRUE)) {
+    if( grepl("\\.nii$", con, ignore.case = TRUE) ) {
+      gzipped <- FALSE
+    }
     con <- path_ext_remove(con)
   }
-  oro.nifti::writeNIfTI(nim = x, filename = con, ...)
+  oro.nifti::writeNIfTI(nim = x, filename = con, gzipped = gzipped, ...)
 }
 
+#' @rdname imaging-volume
 #' @export
 io_write_nii.ieegio_mgh <- function(x, con, ...) {
 
@@ -318,29 +340,29 @@ io_write_nii.array <- function(x, con, vox2ras = NULL, ...) {
   if( nframes == 1 && length(shape) != 3 ) {
     pixdim[[5]] <- 0
     shape <- shape[1:3]
-    data <- array(data[seq_len(prod(shape))], dim = shape)
+    x <- array(x[seq_len(prod(shape))], dim = shape)
   }
 
 
 
-  data[is.na(data)] <- 0
-  rg <- range(data)
-  if(all(data - round(data) == 0)) {
+  x[is.na(x)] <- 0
+  rg <- range(x)
+  if(all(x - round(x) == 0)) {
     if( rg[[1]] >= 0 && rg[[2]] <= 255 ) {
       # UINT8
       datatype_code <- 2L
       bitpix <- 8L
-      storage.mode(data) <- "integer"
+      storage.mode(x) <- "integer"
     } else if ( rg[[1]] >= -32768 && rg[[2]] <= 32768 ) {
       # INT16
       datatype_code <- 4L
       bitpix <- 16L
-      storage.mode(data) <- "integer"
+      storage.mode(x) <- "integer"
     } else if ( rg[[1]] >= -2147483648 && rg[[2]] <= 2147483648 ) {
       # INT32
       datatype_code <- 8L
       bitpix <- 32L
-      storage.mode(data) <- "integer"
+      storage.mode(x) <- "integer"
     } else {
       # FLOAT32
       bitpix <- 32L
@@ -353,7 +375,7 @@ io_write_nii.array <- function(x, con, vox2ras = NULL, ...) {
   }
 
   # functional
-  nii <- oro.nifti::as.nifti(data)
+  nii <- oro.nifti::as.nifti(x)
   # sizeof_hdr = 348L,
   # dim_info = 0L,
   # dim = as.integer(c(length(x$shape), x$shape, rep(1, 7 - length(x$shape)))),
