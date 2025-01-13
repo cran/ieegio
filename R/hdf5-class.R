@@ -33,6 +33,8 @@ ensure_hdf5_backend <- local({
       return()
     }
 
+    check_py_flag()
+
     if(!is.null(h5py)) { return(h5py) }
     rpymat <- asNamespace("rpymat")
 
@@ -87,7 +89,10 @@ h5FileValid <- function(filename){
 }
 
 #' @title Lazy 'HDF5' file loader
-#' @description provides hybrid data structure for 'HDF5' file
+#' @description Provides hybrid data structure for 'HDF5' file. The class is
+#' not intended for direct-use. Please see \code{\link{io_read_h5}} and
+#' \code{\link{io_write_h5}}.
+#' @export
 LazyH5 <- R6::R6Class(
   classname = 'LazyH5',
   portable = TRUE,
@@ -218,6 +223,13 @@ LazyH5 <- R6::R6Class(
                 storage.mode(x) <- "double"
               }
             },
+            "character" = {
+              x <- as.character(x)
+            },
+            "string" = {
+              x <- as.character(x)
+              ctype <- "character"
+            },
             {
               storage.mode(x) <- ctype
             }
@@ -285,7 +297,7 @@ LazyH5 <- R6::R6Class(
               if(!ptr$path_valid(path = nm)){
                 ptr <- ptr$create_group(i)
                 if(!self$quiet){
-                  cat('{private$file} => {nm} (Group Created)\n')
+                  cat(sprintf('%s => %s (Group Created)\n', private$file, nm))
                 }
               }else{
                 ptr <- ptr[[i]]
@@ -297,13 +309,13 @@ LazyH5 <- R6::R6Class(
             if(ptr$path_valid(path = nm)){
               # dataset exists, unlink first
               if(!self$quiet){
-                cat('{private$file} => {private$name} (Dataset Removed)\n')
+                cat(sprintf('%s => %s (Dataset Removed)\n', private$file, nm))
               }
               ptr$link_delete(nm)
             }
             # new create
             if(!self$quiet){
-              cat('{private$file} => {private$name} (Dataset Created)\n')
+              cat(sprintf('%s => %s (Dataset Created)\n', private$file, nm))
             }
             if(missing(robj)){
               robj <- NA

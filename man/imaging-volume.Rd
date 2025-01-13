@@ -48,7 +48,7 @@ io_write_mgz(x, con, ...)
 
 io_read_nii(
   file,
-  method = c("oro", "rnifti", "ants"),
+  method = c("rnifti", "oro", "ants"),
   header_only = FALSE,
   ...
 )
@@ -65,7 +65,16 @@ io_write_nii(x, con, ...)
 
 \method{io_write_nii}{ieegio_mgh}(x, con, ...)
 
-\method{io_write_nii}{array}(x, con, vox2ras = NULL, ...)
+\method{io_write_nii}{array}(
+  x,
+  con,
+  vox2ras = NULL,
+  datatype_code = NULL,
+  xyzt_units = c("NIFTI_UNITS_MM", "NIFTI_UNITS_SEC"),
+  intent_code = "NIFTI_INTENT_NONE",
+  ...,
+  gzipped = NA
+)
 }
 \arguments{
 \item{file}{file path to read volume data}
@@ -100,9 +109,13 @@ compressed; default is inferred from the file name. When the file ends
 with \code{'nii'}, then no compression is used; otherwise the file will
 be compressed. If the file name does not end with \code{'nii'} nor
 \code{'nii.gz'}, then the file extension will be added automatically.}
+
+\item{datatype_code, xyzt_units, intent_code}{additional flags for
+'NIfTI' headers, for advanced users}
 }
 \value{
-imaging readers return \code{ieegio_volume} objects.
+Imaging readers return \code{ieegio_volume} objects. The writers
+return the file path to where the file is saved to.
 }
 \description{
 Read and write volume data ('MRI', 'CT', etc.) in 'NIfTI' or 'MGH' formats.
@@ -139,20 +152,25 @@ vol$transforms$vox2ras_tkr
 # to FSL
 vol$transforms$vox2fsl
 
-image(vol$data[,,128], asp = 1, axes = FALSE)
+plot(vol, position = c(10, 0, 30))
 
 # ---- using other methods --------------------------------------
 # default
-vol <- read_volume(file, method = "oro", format = "nifti")
+vol <- read_volume(file, method = "rnifti", format = "nifti")
 vol$header
 
 # lazy-load nifti
-vol2 <- read_volume(file, method = "rnifti", format = "nifti")
+vol2 <- read_volume(file, method = "oro", format = "nifti")
 vol2$header
+
+\dontrun{
+# requires additional python environment
 
 # Using ANTsPyx
 vol3 <- read_volume(file, method = "ants", format = "nifti")
 vol3$header
+
+}
 
 # ---- write --------------------------------------------------------
 

@@ -1,4 +1,5 @@
 ## ----include = FALSE, echo = FALSE, results='hide'----------------------------
+# Sys.setenv("IEEGIO_PKGDOWN" = "TRUE")
 if(identical(Sys.getenv("IEEGIO_PKGDOWN", unset = ""), "")) {
   knitr::opts_chunk$set(
     collapse = TRUE,
@@ -17,33 +18,33 @@ if(identical(Sys.getenv("IEEGIO_PKGDOWN", unset = ""), "")) {
 }
 
 ## ----sample-------------------------------------------------------------------
-#  library(ieegio)
-#  edf_path <- ieegio_sample_data("edfPlusD.edf")
+# library(ieegio)
+# edf_path <- ieegio_sample_data("edfPlusD.edf")
 
 ## ----read_edf-----------------------------------------------------------------
-#  edf <- read_edf(edf_path, verbose = FALSE)
-#  print(edf)
+# edf <- read_edf(edf_path, verbose = FALSE)
+# print(edf)
 
 ## ----edf_methods--------------------------------------------------------------
-#  header <- edf$get_header()
-#  str(header)
-#  
-#  chan_tbl <- edf$get_channel_table()
-#  print(chan_tbl, nrows = 2, topn = 2)
-#  
-#  annot <- edf$get_annotations()
-#  annot
+# header <- edf$get_header()
+# str(header)
+# 
+# chan_tbl <- edf$get_channel_table()
+# print(chan_tbl, nrows = 2, topn = 2)
+# 
+# annot <- edf$get_annotations()
+# annot
 
 ## ----get_channel--------------------------------------------------------------
-#  # get Channel 1
-#  channel <- edf$get_channel(1)
-#  channel
+# # get Channel 1
+# channel <- edf$get_channel(1)
+# channel
 
 ## ----plot_channel-------------------------------------------------------------
-#  plot(
-#    x = channel$time, y = channel$value,
-#    xlab = "Time", ylab = channel$info$Unit,
-#    main = channel$info$Label,
-#    type = "p", pch = ".", col = "green", lwd = 2
-#  )
+# plot(
+#   x = channel$time, y = channel$value,
+#   xlab = "Time", ylab = channel$info$Unit,
+#   main = channel$info$Label,
+#   type = "p", pch = ".", col = "green", lwd = 2
+# )
 

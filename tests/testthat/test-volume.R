@@ -31,7 +31,7 @@ test_that("io_nii", {
 
   v <- io_read_nii(f)
   expect_true(inherits(v, "ieegio_nifti"))
-  expect_true(inherits(v, "ieegio_oro"))
+  expect_true(inherits(v, "ieegio_rnifti"))
 
   expect_equal(v$shape, dim(tmp))
   expect_equal(v$transforms$vox2ras, vox2ras, tolerance = 1e-4, ignore_attr = TRUE)
@@ -46,10 +46,10 @@ test_that("io_nii", {
 
 
   # io_write_nii.niftiImage
-  v <- read_volume(file = f, method = 'rnifti')
+  v <- read_volume(file = f, method = 'oro')
 
   expect_true(inherits(v, "ieegio_nifti"))
-  expect_true(inherits(v, "ieegio_rnifti"))
+  expect_true(inherits(v, "ieegio_oro"))
   expect_equal(v$shape, dim(tmp))
   expect_equal(v$transforms$vox2ras, vox2ras, tolerance = 1e-4, ignore_attr = TRUE)
   expect_equal(v$transforms$vox2ras_tkr, get_vox2ras_tkr(vox2ras, v$shape/2), tolerance = 1e-4, ignore_attr = TRUE)
@@ -104,6 +104,8 @@ test_that("io_nii", {
   expect_equal(v2$transforms$vox2ras_tkr, get_vox2ras_tkr(vox2ras, v$shape/2), tolerance = 1e-4, ignore_attr = TRUE)
 
   # ANTs
+  testthat::skip_if(nzchar(Sys.getenv("IEEGIO_NO_PYTHON", unset = "")))
+  testthat::skip_if(nzchar(Sys.getenv("IEEGIO_NO_PYTHON", unset = "")))
   skip_if_not(rpyANTs::ants_available("ants"), message = "ANTs is not installed")
   v <- read_volume(file = f, method = 'ants')
 
@@ -177,7 +179,7 @@ test_that("io_mgz", {
   v2 <- read_volume(file = f3)
 
   expect_true(inherits(v2, "ieegio_nifti"))
-  expect_true(inherits(v2, "ieegio_oro"))
+  expect_true(inherits(v2, "ieegio_rnifti"))
   expect_equal(v2$shape, dim(tmp))
   expect_equal(v2$transforms$vox2ras, vox2ras, tolerance = 1e-4, ignore_attr = TRUE)
   expect_equal(v2$transforms$vox2ras_tkr, get_vox2ras_tkr(vox2ras, v$shape/2), tolerance = 1e-4, ignore_attr = TRUE)

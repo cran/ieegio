@@ -13,6 +13,7 @@ py_capture_output <- function(...) {
 
 # Installs
 validate_python <- function(verbose = TRUE) {
+  check_py_flag()
   verb <- function(expr) {
     if(verbose) {
       force( expr )
@@ -53,6 +54,7 @@ validate_python <- function(verbose = TRUE) {
   pynwb <- NULL
 
   get_pynwb <- function(force = FALSE, error_if_missing = TRUE) {
+    check_py_flag()
     if(!force && inherits(pynwb, "python.builtin.module")) {
       return( pynwb )
     }
@@ -86,20 +88,35 @@ validate_python <- function(verbose = TRUE) {
   )
 })
 
-ensure_py_package <- function(packages, python_ver = "auto", ...) {
-  if(!dir.exists(rpymat::env_path())) {
-    standalone <- !file.exists(rpymat::conda_bin())
-    rpymat::configure_conda(python_ver = python_ver, force = TRUE, standalone = standalone)
+ensure_py_package <- local({
+
+  installed_pkgs_tbl <- NULL
+
+  function(packages, python_ver = "auto", ...) {
+    check_py_flag()
+    if(!dir.exists(rpymat::env_path())) {
+      standalone <- !file.exists(rpymat::conda_bin())
+      rpymat::configure_conda(python_ver = python_ver, force = TRUE, standalone = standalone)
+    }
+    rpymat::ensure_rpymat(verbose = FALSE)
+
+    if(is.null(installed_pkgs_tbl) || !is.data.frame(installed_pkgs_tbl) || !all(packages %in% installed_pkgs_tbl$package)) {
+      installed_pkgs_tbl <<- rpymat::list_pkgs()
+    }
+
+    packages <- packages[!packages %in% installed_pkgs_tbl$package]
+
+    if(length(packages)) {
+      rpymat::add_packages(packages, ...)
+      installed_pkgs_tbl <<- rpymat::list_pkgs()
+    }
+
+    invisible()
   }
-  rpymat::ensure_rpymat(verbose = FALSE)
-  installed_pkgs_tbl <- rpymat::list_pkgs()
-  packages <- packages[!packages %in% installed_pkgs_tbl$package]
-  if(length(packages)) {
-    rpymat::add_packages(packages, ...)
-  }
-}
+})
 
 import_py_module <- function(name, package = name, convert = FALSE) {
+  check_py_flag()
   rpymat::ensure_rpymat(verbose = FALSE, cache = TRUE)
   module <- tryCatch({
     rpymat::import(name, convert = convert)
@@ -132,6 +149,7 @@ pynwb_module <- .pynwb$get
 
 
 is_invalid_py_pointer <- function(x) {
+  check_py_flag()
   rpymat::ensure_rpymat(verbose = FALSE)
   asNamespace("reticulate")$py_is_null_xptr(x)
 }
