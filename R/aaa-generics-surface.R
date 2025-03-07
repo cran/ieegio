@@ -203,8 +203,229 @@ print.ieegio_surface <- function(x, ...) {
   cat(format(x), "", sep = "\n")
 }
 
+sparse_to_dense_geometry <- function(x) {
+  if(!x$sparse) { return(x) }
+
+  node_index <- x$sparse_node_index
+  n_verts <- max(node_index, na.rm = TRUE)
+
+  if(length(x$geometry)) {
+    vertices <- array(NA_real_, c(4, n_verts))
+    vertices[1:3, node_index] <- x$geometry$vertices[1:3, ]
+    vertices[4, ] <- 1
+    x$geometry$vertices <- vertices
+
+    if(length(x$geometry$faces)) {
+      face_start <- x$geometry$face_start
+      if(!length(face_start)) {
+        face_start <- min(x$geometry$faces, na.rm = TRUE)
+      }
+      if(face_start <= 0) {
+        x$geometry$faces <- x$geometry$faces + (1 - face_start)
+        storage.mode(x$geometry$faces) <- "integer"
+      }
+      x$geometry$face_start <- 1L
+    }
+  }
+
+  if(length(x$color)) {
+    vertex_color <- array(0, dim = c(n_verts, 4))
+    vertex_color[, 4] <- 1
+    vertex_color[node_index, seq_len(ncol(x$color))] <- x$color
+    x$color <- vertex_color
+  }
+
+  if(length(x$time_series)) {
+    re <- array(0, dim = c(n_verts, ncol(x$time_series$value)))
+    re[node_index, ] <- x$time_series$value
+    x$time_series$value <- re
+  }
+
+  if(length(x$annotations)) {
+    stable <- x$annotations$data_table
+    nms <- names(stable)
+    x$annotations$data_table <- data.table::as.data.table(structure(
+      names = nms,
+      lapply(nms, function(nm) {
+        item <- rep(0L, n_verts)
+        item[node_index] <- stable[[nm]]
+      })
+    ))
+  }
+
+  if(length(x$measurements)) {
+    stable <- x$measurements$data_table
+    nms <- names(stable)
+    x$measurements$data_table <- data.table::as.data.table(structure(
+      names = nms,
+      lapply(nms, function(nm) {
+        item <- rep(0L, n_verts)
+        item[node_index] <- stable[[nm]]
+      })
+    ))
+  }
+
+  x$sparse_node_index <- NULL
+  x$sparse <- FALSE
+
+  fix_surface_class(x)
+
+}
+
+fix_surface_class <- function(x) {
+  tweak_names <- c("geometry", "measurements", "time_series", "annotations", "color")
+  tweak_classes <- sprintf("ieegio_surface_contains_%s", tweak_names)
+
+  contain_classes <- sprintf("ieegio_surface_contains_%s", names(x))
+  remove_classes <- tweak_classes[!tweak_classes %in% contain_classes]
+  contain_classes <- contain_classes[contain_classes %in% tweak_classes]
+
+  cls <- class(x)
+  cls <- c(contain_classes, cls[!cls %in% remove_classes])
+  class(x) <- unique(cls)
+
+  # also fix the internal header
+  if("ieegio_surface_contains_geometry" %in% contain_classes) {
+    geometry <- .subset2(x, "geometry")
+    nverts <- ncol(geometry$vertices)
+    if(length(geometry$faces)) {
+      type <- "tris"
+      nfaces <- ncol(geometry$faces)
+    } else {
+      type <- "points"
+      nfaces <- 0L
+    }
+    x$header <- structure(
+      class = "basic_geometry",
+      list(
+        internal = list(
+          num_vertices_expected = nverts,
+          num_faces_expected = nfaces
+        ),
+        mesh_face_type = type
+      )
+    )
+  }
+  x
+}
+
+#' @title Merge two \code{'ieegio'} surfaces
+#' @description
+#' Either merge surface objects by attributes or merge geometries
+#' @param x,y,... \code{'ieegio'} surface objects, see
+#' \code{\link{as_ieegio_surface}} or \code{\link{read_surface}}. Object
+#' \code{x} must contain geometry information.
+#' @param merge_type type of merge:
+#' \describe{
+#' \item{\code{"attribute"}}{merge \code{y,...} into x by attributes such
+#' as color, measurements, annotations, or time-series data, assuming
+#' \code{x,y,...} all refer to the same geometry, hence the underlying
+#' number of vertices should be the same.}
+#' \item{\code{"geometry"}}{merge \code{y,...} into x by geometry; this
+#' requires the surfaces to merge have geometries and cannot be only surface
+#' attributes. Two mesh objects will be merged into one, and face index will
+#' be re-calculated. The merge happens in transformed space, Notice the attributes will be ignored and eventually
+#' discarded during merge.}
+#' }
+#' @param merge_space space to merge the geometries; only used when
+#' \code{merge_type} is \code{"geometry"}. Default is to directly merge the
+#' surfaces in \code{"model"} space, i.e. assuming the surfaces share the same
+#' transform; alternatively, if the model to world transforms are different,
+#' users can choose to merge in \code{"world"} space, then all the surfaces
+#' will be transformed into world space and mapped back to the model space
+#' in \code{x}
+#' @param transform_index which local-to-world transform to use when merging
+#' geometries in the world space; default is the first transform for each
+#' surface object. The transform list can be obtained from
+#' \code{surface$geometry$transforms} and \code{transform_index} indicates the
+#' index of the transform matrices. The length of \code{transform_index} can be
+#' either 1 (same for all surfaces) or the length of all the surfaces, (i.e.
+#' length of \code{list(x,y,...)}), when the index needs to be set for each
+#' surface respectively. If any index is set to \code{NA}, then it means no
+#' transform is to be applied and that surface will be merged assuming its
+#' model space is the world space.
+#' @param verbose whether to verbose the messages
+#'
+#' @returns A merged surface object
+#' @examples
+#'
+#'
+#' # Construct example geometry
+#' dodecahedron_vert <- matrix(
+#'   ncol = 3, byrow = TRUE,
+#'   c(-0.62, -0.62, -0.62, 0.62, -0.62, -0.62, -0.62, 0.62, -0.62,
+#'     0.62, 0.62, -0.62, -0.62, -0.62, 0.62, 0.62, -0.62, 0.62,
+#'     -0.62, 0.62, 0.62, 0.62, 0.62, 0.62, 0.00, -0.38, 1.00,
+#'     0.00, 0.38, 1.00, 0.00, -0.38, -1.00, 0.00, 0.38, -1.00,
+#'     -0.38, 1.00, 0.00, 0.38, 1.00, 0.00, -0.38, -1.00, 0.00,
+#'     0.38, -1.00, 0.00, 1.00, 0.00, -0.38, 1.00, 0.00, 0.38,
+#'     -1.00, 0.00, -0.38, -1.00, 0.00, 0.38)
+#' )
+#'
+#' dodecahedron_face <- matrix(
+#'   ncol = 3L, byrow = TRUE,
+#'   c(1, 11, 2, 1, 2, 16, 1, 16, 15, 1, 15, 5, 1, 5, 20, 1, 20, 19,
+#'     1, 19, 3, 1, 3, 12, 1, 12, 11, 2, 11, 12, 2, 12, 4, 2, 4, 17,
+#'     2, 17, 18, 2, 18, 6, 2, 6, 16, 3, 13, 14, 3, 14, 4, 3, 4, 12,
+#'     3, 19, 20, 3, 20, 7, 3, 7, 13, 4, 14, 8, 4, 8, 18, 4, 18, 17,
+#'     5, 9, 10, 5, 10, 7, 5, 7, 20, 5, 15, 16, 5, 16, 6, 5, 6, 9,
+#'     6, 18, 8, 6, 8, 10, 6, 10, 9, 7, 10, 8, 7, 8, 14, 7, 14, 13)
+#' )
+#'
+#' x0 <- as_ieegio_surface(dodecahedron_vert, faces = dodecahedron_face)
+#'
+#' plot(x0)
+#'
+#'
+#' # ---- merge by attributes -----------------------------------
+#'
+#' # point-cloud but with vertex measurements
+#' y1 <- as_ieegio_surface(
+#'   dodecahedron_vert,
+#'   measurements = data.frame(MyVariable = dodecahedron_vert[, 1]),
+#'   transform = diag(c(2,1,0.5,1))
+#' )
+#'
+#' plot(y1)
+#'
+#' # the geometry of `y1` will be discarded and only attributes
+#' # (in this case, measurements:MyVariable) will be merged to `x`
+#'
+#' z1 <- merge(x0, y1, merge_type = "attribute")
+#'
+#' plot(z1)
+#'
+#' # ---- merge by geometry ----------------------------------------
+#'
+#' y2 <- as_ieegio_surface(
+#'   dodecahedron_vert + 4, faces = dodecahedron_face,
+#'   transform = diag(c(2, 1, 0.5, 1))
+#' )
+#'
+#' plot(y2)
+#'
+#' # merge directly in model space: transform matrix of `y2` will be ignored
+#' z2 <- merge(x0, y2, merge_type = "geometry", merge_space = "model")
+#'
+#' plot(z2)
+#'
+#' # merge x, y2 in the world space where transforms will be respected
+#' z3 <- merge(x0, y2, merge_type = "geometry", merge_space = "world")
+#'
+#' plot(z3)
+#'
+#'
+#'
 #' @export
-merge.ieegio_surface <- function(x, y, ...) {
+merge.ieegio_surface <- function(
+    x, y, ...,
+    merge_type = c("attribute", "geometry"),
+    merge_space = c("model", "world"),
+    transform_index = 1, verbose = TRUE) {
+
+  merge_type <- match.arg(merge_type)
+  merge_space <- match.arg(merge_space)
+
   base_surface <- x
   if(missing(y)) {
     additional_surfaces <- list(...)
@@ -215,9 +436,9 @@ merge.ieegio_surface <- function(x, y, ...) {
 
   base_surface$header <- NULL
 
-  has_grometry <- !is.null(x$geometry)
+  has_geometry <- !is.null(x$geometry)
 
-  if(!has_grometry) {
+  if(!has_geometry) {
     stop("`merge.ieegio_surface`: the first element `x` MUST contain the ",
          "geometry data (surface vertex nodes, face indices).")
   }
@@ -231,183 +452,183 @@ merge.ieegio_surface <- function(x, y, ...) {
     node_index <- seq_len(n_verts)
   }
 
-  get_color_fill <- function(z, sparse, node_index) {
-    if(!sparse || !length(z$color)) { return(z$color) }
-    vertex_color <- array(0, dim = c(n_verts, 4))
-    vertex_color[, 4] <- 1
-    vertex_color[node_index, seq_len(ncol(z$color))] <- z$color
-    vertex_color
-  }
-
-  get_time_series_full <- function(z, sparse, node_index) {
-    if(!length(z$time_series)) { return(NULL) }
-    if(!sparse || !length(z$time_series)) { return(z$time_series$value) }
-    re <- array(0, dim = c(n_verts, ncol(z$time_series$value)))
-    re[node_index, ] <- z$time_series$value
-    re
-  }
-
-  get_annot_or_meas_full <- function(z, sparse, node_index,
-                                     type = "annotations") {
-    if(!length(z[[type]])) {
-      return(NULL)
-    }
-    if(!sparse) {
-      return(z[[type]]$data_table)
-    }
-    stable <- z[[type]]$data_table
-    nms <- names(stable)
-    annot_data <- data.table::data.table(V1 = rep(0L, n_verts))
-    names(annot_data) <- nms[[1]]
-
-    data.table::as.data.table(structure(
-      names = nms,
-      lapply(nms, function(nm) {
-        item <- rep(0L, n_verts)
-        item[node_index] <- stable[[nm]]
-      })
-    ))
-  }
-
-  if(x$sparse) {
-    if(length(x$annotations)) {
-      x$annotations$data_table <- get_annot_or_meas_full(
-        x, TRUE, node_index, "annotations")
-    }
-    if(length(x$measurements)) {
-      x$measurements$data_table <- get_annot_or_meas_full(
-        x, TRUE, node_index, "measurements")
-    }
-    if(length(x$color)) {
-      x$color <- get_color_fill(x, TRUE, node_index)
-    }
-    if(length(x$time_series)) {
-      x$time_series$value <- get_time_series_full(x, TRUE, node_index)
-    }
-    x$sparse <- FALSE
-  }
 
 
 
-  for(y in additional_surfaces) {
-    if( !is.null(y$geometry) ) {
-      if(n_verts != ncol(y$geometry$vertices)) {
-        stop("One of the surface object contains geometry that has ",
-             "inconsistent number of vertices. Please check if the surface ",
-             "objects share the same number of vertex nodes.")
+  if( merge_type == "geometry" ) {
+    # throw all the attributes: they will no longer be valid
+    x$annotations <- NULL
+    x$measurements <- NULL
+    x$color <- NULL
+    x$time_series <- NULL
+
+    if(merge_space == "world") {
+      if(verbose) {
+        message("Merging geometries in the transformed world space indicated by `transform_index` list.")
       }
-    }
-
-    if(y$sparse) {
-      sparse <- TRUE
-      node_index <- y$sparse_node_index
-    } else {
-      sparse <- FALSE
-      node_index <- seq_len(n_verts)
-    }
-
-    # color
-    if( !is.null(y$color) ) {
-      if(length(x$color)) {
-        x$color[node_index, seq_len(ncol(y$color))] <- y$color
+      n_total_surfs <- length(additional_surfaces) + 1
+      if(length(transform_index) == 1) {
+        transform_index <- rep(transform_index, n_total_surfs)
       } else {
-        x$color <- get_color_fill(y, sparse, node_index)
-      }
-    }
-
-    # annot
-    if(length(y$annotations)) {
-      if( length(x$annotations) ) {
-        label_table_x <- x$annotations$label_table[, c("Key", "Label")]
-        label_table_y <- y$annotations$label_table[, c("Key", "Label")]
-        merged <- merge(
-          label_table_x,
-          label_table_y,
-          by = "Key",
-          all = FALSE,
-          suffixes = c("_x", "_y")
-        )
-        merged <- merged[!is.na(merged$Key), ]
-        sel <- merged$Label_x != merged$Label_y
-        if(any(sel)) {
-          key_x <- merged$Key[sel][[1]]
-          Label_x <- merged$Label_x[sel][[1]]
-          Label_y <- merged$Label_y[sel][[1]]
-          stop("Unable to merge two annotations with the same key but ",
-               "different labels. For example, key [", key_x,
-               "] represents ", sQuote(Label_x), " in one dataset but ",
-               sQuote(Label_y), " in another.")
+        if(length(transform_index) != n_total_surfs) {
+          stop(
+            "`transform_index` length must be either 1 ",
+            "(same transform index for all), or its length must equal ",
+            "to the total number of surfaces (=", n_total_surfs, ").")
         }
-        sel <- !label_table_y$Key %in% merged$Key
-        x$annotations$label_table <- rbind(x$annotations$label_table, y$annotations$label_table[sel, ])
-        x$annotations$data_table <- cbind(
-          x$annotations$data_table,
-          get_annot_or_meas_full(y, y$sparse, node_index)
-        )
-        x$annotations$meta <- c(x$annotations$meta, y$annotations$meta)
-      } else {
-        x$annotations <- list(
-          label_table = y$annotations$label_table,
-          data_table = get_annot_or_meas_full(y, y$sparse, node_index),
-          meta = y$annotations$meta
-        )
+      }
+    } else {
+      if(verbose) {
+        message("Merging geometries directly without checking transforms (assuming the transforms are the same)")
       }
     }
+  } else if(verbose) {
+    message("Merging geometry attributes, assuming all the surface objects have the same number of vertices.")
+  }
+  # make dense x and make sure face starts from 1
+  x <- sparse_to_dense_geometry(x)
 
-    # measurements
-    if(length(y$measurements)) {
-      if( length(x$measurements) ) {
-        x$measurements$data_table <- cbind(
-          x$measurements$data_table,
-          get_annot_or_meas_full(
-            z = y,
-            sparse = y$sparse,
-            node_index = node_index,
-            type = "measurements"
-          )
-        )
-        x$measurements$meta <- c(x$measurements$meta, y$measurements$meta)
-      } else {
-        x$measurements <- list(
-          data_table = get_annot_or_meas_full(
-            z = y,
-            sparse = y$sparse,
-            node_index = node_index,
-            type = "measurements"
-          ),
-          meta = y$measurements$meta
-        )
-      }
+  get_transform <- function(z, idx) {
+    transforms <- z$geometry$transforms
+    if(is.na(idx) || !length(transforms)) {
+      return(diag(1, 4))
     }
-
-    # time_series
-    if(length(y$time_series)) {
-      if(length(x$time_series)) {
-        x$time_series$value <- cbind(
-          x$time_series$value,
-          get_time_series_full(y, sparse, node_index)
-        )
-        x$time_series$slice_duration <- c(
-          x$time_series$slice_duration,
-          y$time_series$slice_duration
-        )
-      } else {
-        x$time_series <- y$time_series
-        x$time_series$value <- get_time_series_full(x, sparse, node_index)
-      }
+    if( idx <= 0 || idx > length(transforms) ) {
+      stop(sprintf("Surface has no transform index %s.", idx))
     }
+    transforms[[idx]]
   }
 
-  contains <- names(x)
-  contains <- contains[contains %in% c(
-    "geometry", "measurements", "time_series", "annotations", "color"
-  )]
-  cls <- c(
-    sprintf("ieegio_surface_contains_%s", contains),
-    class(x)
+  if(merge_type == "geometry" && merge_space == "world") {
+    x_world2local <- solve(get_transform(x, transform_index[[1]]))
+  } else {
+    x_world2local <- NULL
+  }
+
+  x <- Reduce(
+    seq_along(additional_surfaces),
+    init = x,
+    f = function(x, kk) {
+      # update x data in case y contains geometry
+      n_verts <- ncol(x$geometry$vertices)
+
+      y <- additional_surfaces[[ kk ]]
+
+      switch(
+        merge_type,
+        "geometry" = {
+          if( is.null(y$geometry) ) { return(x) }
+          y$annotations <- NULL
+          y$measurements <- NULL
+          y$color <- NULL
+          y$time_series <- NULL
+          y <- sparse_to_dense_geometry(y)
+
+          if( merge_space == "world" ) {
+            t_idx <- transform_index[[ kk + 1 ]]
+            y_local2world <- get_transform(y, t_idx)
+            transform_y2x <- x_world2local %*% y_local2world
+
+            # bind vertices in the world space
+            x$geometry$vertices <- cbind(x$geometry$vertices, transform_y2x %*% y$geometry$vertices)
+          } else {
+
+            # bind vertices directly
+            x$geometry$vertices <- cbind(x$geometry$vertices, y$geometry$vertices)
+          }
+          if(length(y$geometry$faces)) {
+            x$geometry$faces <- cbind(x$geometry$faces, y$geometry$faces + n_verts)
+          }
+        },
+        {
+          y <- sparse_to_dense_geometry(y)
+
+          if( !is.null(y$geometry) && n_verts != ncol(y$geometry$vertices) ) {
+            stop(
+              "You are trying to merge attributes. ",
+              "One of the surface object contains geometry that has ",
+              "inconsistent number of vertices. Please check if the surface ",
+              "objects share the same number of vertex nodes. If you want to ",
+              "merge geomtries, use `merge(..., merge_type = 'geometry')`.")
+          }
+
+          # color
+          if( !is.null(y$color) ) {
+            x$color <- y$color
+          }
+
+          # annot
+          if(length(y$annotations)) {
+            if( length(x$annotations) ) {
+              label_table_x <- x$annotations$label_table[, c("Key", "Label")]
+              label_table_y <- y$annotations$label_table[, c("Key", "Label")]
+              merged <- merge(
+                label_table_x,
+                label_table_y,
+                by = "Key",
+                all = FALSE,
+                suffixes = c("_x", "_y")
+              )
+              merged <- merged[!is.na(merged$Key), ]
+              sel <- merged$Label_x != merged$Label_y
+              if(any(sel)) {
+                key_x <- merged$Key[sel][[1]]
+                Label_x <- merged$Label_x[sel][[1]]
+                Label_y <- merged$Label_y[sel][[1]]
+                stop("Unable to merge two annotations with the same key but ",
+                     "different labels. For example, key [", key_x,
+                     "] represents ", sQuote(Label_x), " in one dataset but ",
+                     sQuote(Label_y), " in another.")
+              }
+              sel <- !label_table_y$Key %in% merged$Key
+              x$annotations$label_table <- rbind(x$annotations$label_table, y$annotations$label_table[sel, ])
+              x$annotations$data_table <- cbind(
+                x$annotations$data_table,
+                y$annotations$data_table
+              )
+              x$annotations$meta <- c(x$annotations$meta, y$annotations$meta)
+            } else {
+              x$annotations <- y$annotations
+            }
+          }
+
+          # measurements
+          if(length(y$measurements)) {
+            if( length(x$measurements) ) {
+              x$measurements$data_table <- cbind(
+                x$measurements$data_table,
+                y$measurements$data_table
+              )
+              x$measurements$meta <- c(x$measurements$meta, y$measurements$meta)
+            } else {
+              x$measurements <- y$measurements
+            }
+          }
+
+          # time_series
+          if(length(y$time_series)) {
+            if(length(x$time_series)) {
+              x$time_series$value <- cbind(
+                x$time_series$value,
+                y$time_series$value
+              )
+              x$time_series$slice_duration <- c(
+                x$time_series$slice_duration,
+                y$time_series$slice_duration
+              )
+            } else {
+              x$time_series <- y$time_series
+            }
+          }
+
+        }
+      )
+
+      return(x)
+    }
   )
-  class(x) <- unique(cls)
-  x
+
+  fix_surface_class(x)
 }
 
 #' @title Plot '3D' surface objects
@@ -803,11 +1024,16 @@ plot.ieegio_surface <- function(
 #' \code{'curv'} files, containing numerical values (often with continuous
 #' domain) for each vertex node}
 #' }
-#' @param format format of the file, see 'Arguments' section in
-#' \code{\link[freesurferformats]{read.fs.surface}} (when file type is
-#' \code{'geometry'}) and \code{\link[freesurferformats]{read.fs.curv}}
+#' @param format format of the file, for \code{write_surface}, this is either
+#' \code{'gifti'} or \code{'freesurfer'}; for \code{read_surface}, see
+#' 'Arguments' section in \code{\link[freesurferformats]{read.fs.surface}}
+#' (when file type is \code{'geometry'}) and
+#' \code{\link[freesurferformats]{read.fs.curv}}
 #' (when file type is \code{'measurements'})
-#' @param name name of the data; default is the file name
+#' @param name name of the data; for \code{io_read_fs}, this argument must be
+#' a character, and default is the file name; for \code{write_surface}, this
+#' argument can be an integer or a character, representing the
+#' index or name of the corresponding measurement or annotation column.
 #' @param ... for \code{read_surface}, the arguments will be passed to
 #' \code{io_read_fs} if the file is a 'FreeSurfer' file.
 #' @returns A surface object container for \code{read_surface}, and
@@ -883,9 +1109,11 @@ write_surface <- function(
     x, con, format = c("gifti", "freesurfer"),
     type = c("geometry", "annotations", "measurements", "color",
              "time_series"),
-    ...) {
+    ..., name = 1) {
 
   format <- match.arg(format)
+  x <- as_ieegio_surface(x)
+
 
   if(format == "gifti") {
     re <- io_write_gii(x = x, con = con, ...)
@@ -932,6 +1160,29 @@ write_surface <- function(
         filepath = con, vertex_coords = vertices, faces = faces
       )
     },
+    "measurements" = {
+      n_verts <- 0
+      if( x$sparse ) {
+        start_index <- attr(x$sparse_node_index, "start_index")
+        n_verts <- max(x$sparse_node_index)
+        if(length(start_index) == 1 &&
+           !is.na(start_index) &&
+           is.numeric(start_index)) {
+          n_verts <- n_verts - start_index + 1
+        }
+      }
+      n_verts <- max(nrow(x$measurements$data_table), n_verts)
+
+      meas_data <- x$measurements$data_table[[name]]
+      if(length(meas_data) != n_verts) {
+        stop(sprintf(
+          "Number of measurement data points [%d] does not match with the expected number of vertex nodes [%d]",
+          length(meas_data), n_verts
+        ))
+      }
+      freesurferformats::write.fs.curv(filepath = con, data = meas_data)
+
+    },
     "annotations" = {
       n_verts <- 0
       if( x$sparse ) {
@@ -953,7 +1204,7 @@ write_surface <- function(
         names = sprintf("%d", label_table$Key),
         color_codes
       )
-      coloridx <- unname(clut[sprintf("%d", x$annotations$data_table[[1]])])
+      coloridx <- unname(clut[sprintf("%d", x$annotations$data_table[[name]])])
       coloridx <- as.integer(coloridx)
 
 
@@ -979,6 +1230,9 @@ write_surface <- function(
         colortable = colortable,
         labels_as_colorcodes = coloridx,
       )
+    },
+    {
+      stop("Type ", sQuote(type), " is not supported under FreeSurfer format.")
     }
   )
 
