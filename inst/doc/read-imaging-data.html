@@ -48,8 +48,9 @@ overflow: visible;
 }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -60,7 +61,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -347,6 +348,8 @@ imaging formats:</p>
 <code>FreeSurfer MGH/MGZ</code></li>
 <li>Surface: <code>GIfTI</code> &amp; <code>FreeSurfer</code> geometry,
 annotation, curvature/measurement, <code>w</code> format</li>
+<li>Streamlines: <code>TRK</code>, <code>TCK</code>, <code>TT</code>
+(read-only), <code>VTK</code>, <code>VTP</code>, …</li>
 </ul>
 <p>To start, please load <code>ieegio</code>. This vignette uses sample
 data which requires extra download.</p>
@@ -366,7 +369,17 @@ data which requires extra download.</p>
 <span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a></span>
 <span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a><span class="co"># time series</span></span>
 <span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a>ts_file <span class="ot">&lt;-</span> <span class="fu">ieegio_sample_data</span>(</span>
-<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a>  <span class="st">&quot;gifti/icosahedron3d/ts.gii&quot;</span>)</span></code></pre></div>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a>  <span class="st">&quot;gifti/icosahedron3d/ts.gii&quot;</span>)</span>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a><span class="co"># streamlines</span></span>
+<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a>trk_file <span class="ot">&lt;-</span> <span class="fu">ieegio_sample_data</span>(</span>
+<span id="cb1-21"><a href="#cb1-21" tabindex="-1"></a>  <span class="st">&quot;streamlines/CNVII_R.trk&quot;</span>)</span>
+<span id="cb1-22"><a href="#cb1-22" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" tabindex="-1"></a>tck_file <span class="ot">&lt;-</span> <span class="fu">ieegio_sample_data</span>(</span>
+<span id="cb1-24"><a href="#cb1-24" tabindex="-1"></a>  <span class="st">&quot;streamlines/CNVII_R.tck&quot;</span>)</span>
+<span id="cb1-25"><a href="#cb1-25" tabindex="-1"></a></span>
+<span id="cb1-26"><a href="#cb1-26" tabindex="-1"></a>tt_file <span class="ot">&lt;-</span> <span class="fu">ieegio_sample_data</span>(</span>
+<span id="cb1-27"><a href="#cb1-27" tabindex="-1"></a>  <span class="st">&quot;streamlines/CNVII_R.tt&quot;</span>)</span></code></pre></div>
 <div id="volume-files" class="section level2">
 <h2>Volume files</h2>
 <p><code>ieegio::read_volume</code> and
@@ -438,6 +451,26 @@ measurement</p>
 <span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a>    <span class="st">&quot;#b2182b&quot;</span>, <span class="st">&quot;#67001f&quot;</span></span>
 <span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a>  )</span>
 <span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="streamline-files" class="section level1">
+<h1>Streamline files</h1>
+<p>Reading streamlines via universal entry function
+<code>read_streamlines</code></p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>trk <span class="ot">&lt;-</span> <span class="fu">read_streamlines</span>(trk_file, <span class="at">half_voxel_offset =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>tck <span class="ot">&lt;-</span> <span class="fu">read_streamlines</span>(tck_file)</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>tt <span class="ot">&lt;-</span> <span class="fu">read_streamlines</span>(tt_file)</span></code></pre></div>
+<p>To obtain the streamline data</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">message</span>(<span class="st">&quot;Total number of streamlines: &quot;</span>, <span class="fu">length</span>(trk))</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="fu">head</span>(trk[[<span class="dv">1</span>]]<span class="sc">$</span>coords)</span></code></pre></div>
+<p>To preview the streamline data</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>pal <span class="ot">&lt;-</span> <span class="fu">colorRampPalette</span>(<span class="fu">c</span>(<span class="st">&quot;navy&quot;</span>, <span class="st">&quot;grey&quot;</span>, <span class="st">&quot;red&quot;</span>))</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="fu">plot</span>(trk, <span class="at">col =</span> <span class="fu">pal</span>(<span class="fu">length</span>(trk)))</span></code></pre></div>
+<p>To write the streamlines, for example, write <code>tck</code> file to
+<code>trk</code> file:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="co"># Create a temporary file</span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>tfile <span class="ot">&lt;-</span> <span class="fu">tempfile</span>(<span class="at">fileext =</span> <span class="st">&quot;.trk&quot;</span>)</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a><span class="fu">write_streamlines</span>(<span class="at">x =</span> tck, <span class="at">con =</span> tfile)</span></code></pre></div>
 </div>
 
 

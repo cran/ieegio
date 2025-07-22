@@ -954,9 +954,8 @@ plot.ieegio_surface <- function(
     }
   } else {
     if(identical(method, "auto")) {
-      if(package_installed("r3js")) {
-        method <- "r3js"
-      } else if (package_installed("rgl")) {
+      method <- "r3js"
+      if(!package_installed("r3js") && package_installed("rgl")) {
         method <- "rgl_basic"
       }
     }
@@ -1156,9 +1155,13 @@ write_surface <- function(
          is.numeric(face_start) && face_start != 1) {
         faces <- faces - face_start + 1L
       }
-      freesurferformats::write.fs.surface(
-        filepath = con, vertex_coords = vertices, faces = faces
-      )
+      # check if the format ends with STL
+      if(endsWith(tolower(con), ".stl")) {
+        write_binary_stl(x, con)
+      } else {
+        # freesurferformats::write.fs.surface(filepath = con, vertex_coords = vertices, faces = faces)
+        io_write_fs_geometry(con = con, vertex_coords = vertices, faces = faces, transforms = x$geometry$transforms)
+      }
     },
     "measurements" = {
       n_verts <- 0

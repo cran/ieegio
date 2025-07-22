@@ -40,6 +40,15 @@ if(identical(Sys.getenv("IEEGIO_PKGDOWN", unset = ""), "")) {
 # ts_file <- ieegio_sample_data(
 #   "gifti/icosahedron3d/ts.gii")
 # 
+# # streamlines
+# trk_file <- ieegio_sample_data(
+#   "streamlines/CNVII_R.trk")
+# 
+# tck_file <- ieegio_sample_data(
+#   "streamlines/CNVII_R.tck")
+# 
+# tt_file <- ieegio_sample_data(
+#   "streamlines/CNVII_R.tt")
 
 ## ----read_volume--------------------------------------------------------------
 # volume <- read_volume(nifti_file)
@@ -96,4 +105,28 @@ if(identical(Sys.getenv("IEEGIO_PKGDOWN", unset = ""), "")) {
 #     "#b2182b", "#67001f"
 #   )
 # )
+
+## ----read_streamlines, results='hide'-----------------------------------------
+# trk <- read_streamlines(trk_file, half_voxel_offset = TRUE)
+# tck <- read_streamlines(tck_file)
+# tt <- read_streamlines(tt_file)
+
+## ----streamline_subset--------------------------------------------------------
+# message("Total number of streamlines: ", length(trk))
+# 
+# head(trk[[1]]$coords)
+
+## ----streamline_plot, out.width="100%", fig.width = 9, fig.height=3-----------
+# pal <- colorRampPalette(c("navy", "grey", "red"))
+# plot(trk, col = pal(length(trk)))
+
+## ----streamline_write---------------------------------------------------------
+# # Create a temporary file
+# tfile <- tempfile(fileext = ".trk")
+# write_streamlines(x = tck, con = tfile)
+
+## ----streamline_cleanup, echo = FALSE, results='hide'-------------------------
+# if(file.exists(tfile)) {
+#   unlink(tfile)
+# }
 
