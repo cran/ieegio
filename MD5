@@ -1,7 +1,7 @@
-0c7a009f6b3a36a08586cc833078b259 *DESCRIPTION
+c2be9a3a2ee7baeeba36007f0180d81c *DESCRIPTION
 16e321a582f9f14c2d9d7717d4ba4634 *LICENSE
-955b2f2d1ce9aca0b096c520b3efee42 *NAMESPACE
-cc1d79171348f3848272ac4ade656ac2 *NEWS.md
+12d6c9b0db1741b27180e2e3e823287c *NAMESPACE
+2c933d9810f4dd44d014bf638733c342 *NEWS.md
 aa826b0a80fb024baa0ff05c91d9c9b2 *R/LazyFST-class.R
 ee469b085c2201deb371094f37a2c55a *R/aaa-cache.R
 bdcb8682b1212bb6469507d38fe2de5e *R/aaa-docs.R
@@ -15,13 +15,13 @@ ad82a7eb772df6dec1d5b035308c830f *R/bci2000.R
 38f14ed9bf3c9c8829d659e4dd62856b *R/brainvis-cache.R
 338d3e07b056b4f79f7884dd0c113b37 *R/brainvis.R
 7b7d22cf35e8ccca25cb0bcb4abd5853 *R/edf-cache.R
-09c77ed533b2aa57fb98864e9731c0db *R/edf.R
+336f5beb6066d26567486c0ac42cd795 *R/edf.R
 7e962ea43462f2cb8568d3b407bc0334 *R/file_system.R
 f117a9d88501225999e317645c12c1d1 *R/freesurfer.R
 5814cec6b15735b8979c952e8f769b3a *R/fst.R
 c40850e660c99f7c60b54b3379709e46 *R/gifti.R
-c23e472124ebf36602a3aee16f9eadf8 *R/hdf5-class.R
-0e70efd07ea4a866093a47437f5348fc *R/hdf5.R
+974ea76137aa02cf0d7cce3b057ed003 *R/hdf5-class.R
+88dbd6d3535a7f2ec393ba4736e8451b *R/hdf5.R
 216f357df09e8d0b6150e39f227181e6 *R/ini.R
 0e1adfd67343ab5547d85988f675b13b *R/json.R
 9d3e2440208f3ec9314ad62eaa08e111 *R/mat.R
@@ -47,7 +47,7 @@ cb3de041fba32e543e8be8c10a972215 *R/vtk.R
 c1b229e8d1cbbc39a3bb2e1504bef399 *R/xml.R
 f649df503be16d1b87f3056ff86cf7b0 *R/yaml.R
 eb7c1257762d067734144910770a9f3d *R/zzz.R
-fc053de30e412d9b1073a9300e4c9836 *README.md
+fae6906b08af95822dde185d73ac4971 *README.md
 a0ffed560f181584510e119aed0b308a *build/vignette.rds
 0dc648a03aea557fcebdde8f9d945562 *inst/WORDLIST
 83a8aeddadd432ea15e80bcf1d8fd3d7 *inst/doc/read-ephys.R
@@ -58,7 +58,7 @@ a0ffed560f181584510e119aed0b308a *build/vignette.rds
 2a6c41120b0e57b21ebe334d8f9a33c6 *inst/doc/read-imaging-data.html
 0c7b4861d89f0cfbbb2e4833b63541db *inst/lookup_table/D99V2.json
 d262ed5f0a3e5399444068eafba50197 *inst/lookup_table/FreeSurferColorLUT.json
-3fd7ce8c9f856b141f05ce57b365a6ae *inst/sample_data_registry.txt
+1c918ef68574a5df36108c29b0680f02 *inst/sample_data_registry.txt
 178018a08a2e7647b8a1f007ece4bfd4 *inst/validator/gifti.xsd
 7fe8b0344b1d401806a9b8681f6f3038 *man/LazyFST.Rd
 b2864e0e710c1bc281c484d89ceb7b6c *man/LazyH5.Rd
@@ -91,8 +91,10 @@ f159eb57812d7d114e91e2972c6f0d69 *man/read_edf.Rd
 66f0a2213eeaf16cdcc724578b9717df *man/read_nsx.Rd
 d650b9b1296412ee2de9c928ebf56a29 *man/read_nwb.Rd
 2634d2691b6b8aa0914515fdcce10339 *man/resample_volume.Rd
+83f5f775a93472a7af806a7c547c33bf *man/write_edf.Rd
 7c0311772bb8f4fc0bc9af013b325a42 *tests/testthat.R
 b696ba0b284a8ef01f4db1c0bdc2ba50 *tests/testthat/setup.R
+f292ce083dd275a8c8337b0f57121fcd *tests/testthat/test-edf.R
 0dd6d0d92ab72c8fd7ae9b55cb1db404 *tests/testthat/test-hdf5.R
 f31e61e6dd4cf3c82e087a2addf6b468 *tests/testthat/test-resample_volume.R
 33d477f269544e9b5c902b7236d0d28f *tests/testthat/test-rgbaNifti.R
