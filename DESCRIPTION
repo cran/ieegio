@@ -1,6 +1,6 @@
 Package: ieegio
 Title: File IO for Intracranial Electroencephalography
-Version: 0.0.6
+Version: 0.0.8
 Language: en-US
 Encoding: UTF-8
 Authors@R: 
@@ -15,7 +15,7 @@ Description:
 URL: http://dipterix.org/ieegio/
 BugReports: https://github.com/dipterix/ieegio/issues
 License: MIT + file LICENSE
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Imports: data.table (>= 1.16.0), digest, fastmap, filearray (>= 0.1.8),
         freesurferformats, fs, fst (>= 0.9.0), gifti (>= 0.8.0),
         grDevices, hdf5r, jsonlite, oro.nifti, R.matlab (>= 3.7.0), R6,
@@ -26,9 +26,9 @@ Suggests: reticulate, ravetools, rgl, RNifti (>= 1.7.0), rpymat (>=
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 NeedsCompilation: no
-Packaged: 2025-10-23 18:48:35 UTC; dipterix
+Packaged: 2026-01-11 05:00:15 UTC; dipterix
 Author: Zhengjia Wang [aut, cre] (ORCID:
     <https://orcid.org/0000-0001-5629-1116>)
 Maintainer: Zhengjia Wang <dipterix.wang@gmail.com>
 Repository: CRAN
-Date/Publication: 2025-10-24 05:20:08 UTC
+Date/Publication: 2026-01-11 10:30:10 UTC

@@ -1,3 +1,88 @@
+# Compute display range for volume data using percentile-based windowing
+# Following conventions from FSLeyes, AFNI, MRIcroGL, and SPM
+# @param data volume data array
+# @param percentiles numeric vector of length 2, default c(2, 98)
+# @param exclude_zeros NA (auto-detect), TRUE, or FALSE; when NA, excludes
+#        zeros by default but includes them if lower percentile < -500
+#        (indicating CT with -1024 background)
+# @param original_meta optional list with cal_min/cal_max from NIfTI header
+# @returns numeric vector of length 2 (min, max display range)
+compute_display_range <- function(data, percentiles = c(2, 98),
+                                   exclude_zeros = NA,
+                                   original_meta = NULL) {
+
+  # For 4D+ data, use only the first 3D volume for efficiency
+  data_shape <- dim(data)
+  if (length(data_shape) >= 4 && data_shape[[4]] > 1) {
+    data <- data[, , , 1, drop = TRUE]
+  }
+
+  # Flatten data and remove NA/NaN/Inf
+  values <- as.vector(data)
+  values <- values[is.finite(values)]
+
+  if (length(values) == 0) {
+    return(c(0, 1))
+  }
+
+  # Handle exclude_zeros = NA (auto-detect)
+  if (is.na(exclude_zeros)) {
+    # First pass: exclude zeros
+    nonzero_values <- values[values != 0]
+    if (length(nonzero_values) > 0) {
+      vlim <- stats::quantile(nonzero_values,
+                              probs = percentiles / 100,
+                              na.rm = TRUE, names = FALSE)
+      # If lower bound < -500, likely CT data - include zeros and recompute
+      if (vlim[[1]] < -500) {
+        vlim <- stats::quantile(values,
+                                probs = percentiles / 100,
+                                na.rm = TRUE, names = FALSE)
+      }
+    } else {
+      # All zeros - use full range
+      vlim <- c(0, 0)
+    }
+  } else if (isTRUE(exclude_zeros)) {
+    values <- values[values != 0]
+    if (length(values) == 0) {
+      return(c(0, 1))
+    }
+    vlim <- stats::quantile(values,
+                            probs = percentiles / 100,
+                            na.rm = TRUE, names = FALSE)
+  } else {
+    vlim <- stats::quantile(values,
+                            probs = percentiles / 100,
+                            na.rm = TRUE, names = FALSE)
+  }
+
+  # Detect statistical overlay: symmetric around zero, typical z-score range
+  # (min > -30, min < 0, max > 0, max < 30)
+  if (vlim[[1]] > -30 && vlim[[1]] < 0 && vlim[[2]] > 0 && vlim[[2]] < 30) {
+    # Use symmetric range for statistical maps
+    vlim <- max(abs(vlim)) * c(-1, 1)
+  }
+
+  # Check if meta has valid cal_min and cal_max (NIfTI header hints)
+  if (is.list(original_meta) &&
+      all(c("cal_max", "cal_min") %in% names(original_meta))) {
+    cal_min <- original_meta$cal_min
+    cal_max <- original_meta$cal_max
+    # Use header values if they are set and different
+    if (any(c(cal_min, cal_max) != 0) && cal_max != cal_min) {
+      vlim <- c(cal_min, cal_max)
+    }
+  }
+
+  # Ensure valid range
+  if (vlim[[1]] >= vlim[[2]]) {
+    vlim[[2]] <- vlim[[1]] + 1
+  }
+
+  as.numeric(vlim)
+}
+
 get_vox2fsl <- function(shape, pixdim, vox2ras) {
   voxToScaledVoxMat <- diag(c(pixdim[1:3], 1))
   isneuro <- det(vox2ras) > 0
@@ -292,6 +377,22 @@ names.ieegio_volume <- function(x) {
 #' unlink(f)
 #' unlink(f2)
 #'
+#' # ---- Special case in WebAsssembly --------------------------------
+#' # oro.nifti backend is always used
+#'
+#' # Emulate WebAssemply when RNifti is unavailable, using oro.nifti instead
+#' old_opt <- options("ieegio.debug.emscripten" = TRUE)
+#' on.exit({ options(old_opt) }, add = TRUE)
+#'
+#'
+#' # In WebAssemply, RNifti is not available, using oro.nifti instead
+#' vol <- read_volume(file)
+#'
+#' stopifnot(vol$type[[1]] == "oro")
+#'
+#' # Cleanup: make sure the options are reset
+#' options(old_opt)
+#'
 #' }
 #'
 #' @export
@@ -489,47 +590,13 @@ plot.ieegio_volume <- function(
       } else if (length(vlim) >= 2) {
         vlim <- range(vlim, na.rm = TRUE)
       } else {
-        vlim <- range(x_data, na.rm = TRUE)
-        mode <- storage.mode(x_data)
-        if( vlim[[1]] > 0 ) { vlim[[1]] <- 0 }
-        if( mode == "integer" ) {
-          if( vlim[[2]] >= 2 ) {
-            if(vlim[[2]] < 255) {
-              vlim[[2]] <- 255
-              vlim[[1]] <- 0
-            } else if (vlim[[2]] <- 32768) {
-              vlim[[2]] <- 32768
-              vlim[[1]] <- -32767
-            } else if (vlim[[2]] <- 65535) {
-              vlim[[2]] <- 65535
-              vlim[[1]] <- 0
-            }
-          }
-        } else {
-          if( vlim[[1]] == 0 ) {
-            if(vlim[[2]] < 1) {
-              vlim[[2]] <- 1
-            }
-          } else if (vlim[[1]] < 0) {
-            # sym map
-            vlim <- max(abs(vlim)) * c(-1, 1)
-          }
-        }
-
-        # check if meta has valid cal_min and cal_max
-        original_meta <- .subset2(x, "original_meta")
-        if(is.list(original_meta) && all(c("cal_max", "cal_min") %in% names(original_meta))) {
-          cal_min <- original_meta$cal_min
-          cal_max <- original_meta$cal_max
-          if(any(c(cal_min, cal_max) != 0) && cal_max != cal_min) {
-            # need to rescale to 0 - 1
-            vlim <- c(0, 1)
-            x_data <- (x_data - cal_min) / (cal_max - cal_min)
-            x_data[x_data < 0] <- 0
-            x_data[x_data > 1] <- 1
-          }
-        }
-
+        # Use percentile-based windowing (similar to FSLeyes, AFNI, MRIcroGL)
+        vlim <- compute_display_range(
+          data = x_data,
+          percentiles = c(2, 98),
+          exclude_zeros = NA,
+          original_meta = .subset2(x, "original_meta")
+        )
       }
       if(length(col) < 256) {
         col <- grDevices::colorRampPalette(col)(256)
@@ -635,6 +702,10 @@ plot.ieegio_volume <- function(
     x_shape_cumprod[[3]] * (slice_index - 1)
 
   vox_data <- array(x_data[vox_idx], dim = c(length(x_axis), length(y_axis)))
+  # Clamp vox_data to vlim so values outside range are rendered
+  # as boundary colors instead of transparent/NA
+  vox_data[vox_data < vlim[1]] <- vlim[1]
+  vox_data[vox_data > vlim[2]] <- vlim[2]
 
   if(!add) {
     oldpar <- graphics::par(
@@ -879,6 +950,35 @@ length.ieegio_volume <- function(x) {
 #'
 #'
 #'
+#' # ---- When RNifti package is not available ---------------------------
+#'
+#' # Emulate WebAssemply when RNifti is unavailable, using oro.nifti instead
+#' old_opt <- options("ieegio.debug.emscripten" = TRUE)
+#' on.exit({ options(old_opt) }, add = TRUE)
+#'
+#' shape <- c(50, 50, 50)
+#' vox2ras <- matrix(
+#'   c(-1, 0, 0, 25,
+#'     0, 0, 1, -25,
+#'     0, -1, 0, 25,
+#'     0, 0, 0, 1),
+#'   nrow = 4, byrow = TRUE
+#' )
+#'
+#' # continuous
+#' x <- array(rnorm(125000), shape)
+#'
+#' # In WebAssemply, RNifti is not available, using oro.nifti instead
+#' volume <- as_ieegio_volume(x, vox2ras = vox2ras)
+#'
+#' stopifnot(volume$type[[1]] == "oro")
+#'
+#' plot(volume, zoom = 3, pixel_width = 0.5)
+#'
+#' # Cleanup: make sure the options are reset
+#' options(old_opt)
+#'
+#'
 #' @export
 as_ieegio_volume <- function(x, ...) {
   UseMethod("as_ieegio_volume")
@@ -954,6 +1054,7 @@ as_ieegio_volume.array <- function(x, vox2ras = NULL, as_color = is.character(x)
     }
     type <- c("rnifti", "rgba", "nifti")
   } else {
+    # check if we should use oro.nifti (when RNifti is not available)
     x[is.na(x)] <- 0
     rg <- range(x)
 
@@ -981,8 +1082,7 @@ as_ieegio_volume.array <- function(x, vox2ras = NULL, as_color = is.character(x)
     type <- c("rnifti", "nifti")
   }
 
-
-  header <- RNifti::asNifti(x, reference = list(
+  reference <- list(
     xyzt_units = 10L,
     datatype = datatype_code,
     bitpix = compute_nifti_bitpix(datatype_code),
@@ -1000,9 +1100,54 @@ as_ieegio_volume.array <- function(x, vox2ras = NULL, as_color = is.character(x)
     srow_z = vox2ras[3, ],
     regular = "r",
     ...
-  ))
+  )
 
-  meta <- RNifti::niftiHeader(header)
+  use_oro <- FALSE
+  if(!as_color && (get_os() == "emscripten" || getOption("ieegio.debug.emscripten", FALSE))) {
+    # This is running for WASM (special as RNifti is not available in WASM)
+    use_oro <- TRUE
+    header <- oro.nifti::as.nifti(x)
+    header@xyzt_units <- reference$xyzt_units
+    header@datatype <- reference$datatype
+    header@bitpix <- reference$bitpix
+    header@qform_code <- reference$qform_code
+    header@sform_code <- reference$sform_code
+    header@pixdim <- reference$pixdim
+    header@quatern_b <- reference$quatern_b
+    header@quatern_c <- reference$quatern_c
+    header@quatern_d <- reference$quatern_d
+    header@qoffset_x <- reference$qoffset_x
+    header@qoffset_y <- reference$qoffset_y
+    header@qoffset_z <- reference$qoffset_z
+    header@srow_x <- reference$srow_x
+    header@srow_y <- reference$srow_y
+    header@srow_z <- reference$srow_z
+    header@regular <- reference$regular
+
+    header@slice_start <- reference$slice_start %||% header@slice_start
+    header@slice_end <- reference$slice_end %||% header@slice_end
+    header@slice_code <- reference$slice_code %||% header@slice_code
+    header@slice_duration <- reference$slice_duration %||% header@slice_duration
+
+    header@scl_slope <- reference$scl_slope %||% header@scl_slope
+    header@scl_inter <- reference$scl_inter %||% header@scl_inter
+
+    header@cal_max <- reference$cal_max %||% header@cal_max
+    header@cal_min <- reference$cal_min %||% header@cal_min
+
+    header@toffset <- reference$toffset %||% header@toffset
+    header@magic <- reference$magic %||% header@magic
+    header@intent_name <- reference$intent_name %||% header@intent_name
+    header@glmax <- reference$glmax %||% header@glmax
+    header@glmin <- reference$glmin %||% header@glmin
+    header@descrip <- reference$descrip %||% header@descrip
+    header@aux_file <- reference$aux_file %||% header@aux_file
+
+  } else {
+    header <- RNifti::asNifti(x, reference = reference)
+  }
+
+  meta <- as_nifti_header(header)
 
   # vox2ras_tkr
   # vox2ras_tkr <- vox2ras
@@ -1018,19 +1163,30 @@ as_ieegio_volume.array <- function(x, vox2ras = NULL, as_color = is.character(x)
     vox2fsl = vox2fsl
   )
 
-  new_volume(
-    type = type,
-    header = header,
-    meta = meta,
-    transforms = transforms,
-    shape = shape,
-    data = quote({
-      v <- header[drop = FALSE]
-      class(v) <- "array"
-      attr(v, ".nifti_image_ptr") <- NULL
-      v
-    })
-  )
+  if( use_oro ) {
+    new_volume(
+      type = c("oro", "nifti"),
+      header = header,
+      meta = meta,
+      transforms = transforms,
+      shape = shape,
+      data = quote({ header@.Data })
+    )
+  } else {
+    new_volume(
+      type = type,
+      header = header,
+      meta = meta,
+      transforms = transforms,
+      shape = shape,
+      data = quote({
+        v <- header[drop = FALSE]
+        class(v) <- "array"
+        attr(v, ".nifti_image_ptr") <- NULL
+        v
+      })
+    )
+  }
 
 }
 
@@ -1318,7 +1474,7 @@ merge.ieegio_volume <- function(x, y, ..., thresholds = 0, reshape = dim(x), na_
     re$header$slice_duration <- original_meta$slice_duration
   }
 
-  re$original_meta <- RNifti::niftiHeader(re$header)
+  re$original_meta <- as_nifti_header(re$header)
   re
 
 }

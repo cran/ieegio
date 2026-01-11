@@ -1,3 +1,4 @@
+ANTs
 BCI
 BDF
 BlackRock
@@ -5,13 +6,12 @@ BrainVision
 CMD
 DBS
 Electrophysiology
+FSL
 FST
 FreeSurfer
 GIfTI
 HDF
 INI
-JSON
-Lifecycle
 MEF
 MGH
 MGZ
@@ -22,8 +22,6 @@ Neurodata
 Neuroimaging
 PyNWB
 RAS
-YAML
 affine
-cloneable
 iEEG
 json
