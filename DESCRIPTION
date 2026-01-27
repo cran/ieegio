@@ -1,6 +1,6 @@
 Package: ieegio
 Title: File IO for Intracranial Electroencephalography
-Version: 0.0.8
+Version: 0.0.9
 Language: en-US
 Encoding: UTF-8
 Authors@R: 
@@ -26,9 +26,9 @@ Suggests: reticulate, ravetools, rgl, RNifti (>= 1.7.0), rpymat (>=
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 NeedsCompilation: no
-Packaged: 2026-01-11 05:00:15 UTC; dipterix
+Packaged: 2026-01-26 17:56:37 UTC; dipterix
 Author: Zhengjia Wang [aut, cre] (ORCID:
     <https://orcid.org/0000-0001-5629-1116>)
 Maintainer: Zhengjia Wang <dipterix.wang@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-01-11 10:30:10 UTC
+Date/Publication: 2026-01-27 06:30:02 UTC

@@ -1,4 +1,4 @@
-## ----include = FALSE, echo = FALSE, results='hide'----------------------------
+## ----setup, include = FALSE, echo = FALSE, results='hide'---------------------
 # Sys.setenv("IEEGIO_PKGDOWN" = "TRUE")
 if(identical(Sys.getenv("IEEGIO_PKGDOWN", unset = ""), "")) {
   knitr::opts_chunk$set(
@@ -47,4 +47,10 @@ if(identical(Sys.getenv("IEEGIO_PKGDOWN", unset = ""), "")) {
 #   main = channel$info$Label,
 #   type = "p", pch = ".", col = "green", lwd = 2
 # )
+
+## ----teardown, echo=FALSE, results='hide'-------------------------------------
+# cache_dir <- tools::R_user_dir("ieegio", "cache")
+# if(file.exists(cache_dir)) {
+#   unlink(cache_dir, recursive = TRUE, force = TRUE)
+# }
 

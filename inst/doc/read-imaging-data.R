@@ -1,4 +1,4 @@
-## ----include = FALSE, echo = FALSE, results='hide'----------------------------
+## ----setup, include=FALSE, echo = FALSE, results='hide'-----------------------
 if(identical(Sys.getenv("IEEGIO_PKGDOWN", unset = ""), "")) {
   knitr::opts_chunk$set(
     collapse = TRUE,
@@ -128,5 +128,11 @@ if(identical(Sys.getenv("IEEGIO_PKGDOWN", unset = ""), "")) {
 ## ----streamline_cleanup, echo = FALSE, results='hide'-------------------------
 # if(file.exists(tfile)) {
 #   unlink(tfile)
+# }
+
+## ----teardown, echo=FALSE, results='hide'-------------------------------------
+# cache_dir <- tools::R_user_dir("ieegio", "cache")
+# if(file.exists(cache_dir)) {
+#   unlink(cache_dir, recursive = TRUE, force = TRUE)
 # }
 
