@@ -1,5 +1,5 @@
 ## ----setup, include=FALSE, echo = FALSE, results='hide'-----------------------
-if(identical(Sys.getenv("IEEGIO_PKGDOWN", unset = ""), "")) {
+if (identical(Sys.getenv("IEEGIO_PKGDOWN", unset = ""), "")) {
   knitr::opts_chunk$set(
     collapse = TRUE,
     comment = "#>",
@@ -61,7 +61,7 @@ if(identical(Sys.getenv("IEEGIO_PKGDOWN", unset = ""), "")) {
 # 
 # ras_str <- paste(sprintf("%.0f", ras_position), collapse = ",")
 # 
-# for(which in c("coronal", "axial", "sagittal")) {
+# for (which in c("coronal", "axial", "sagittal")) {
 #   plot(x = volume, position = ras_position, crosshair_gap = 10,
 #        crosshair_lty = 2, zoom = 3, which = which,
 #        main = sprintf("%s T1RAS=[%s]", which, ras_str))
@@ -126,13 +126,13 @@ if(identical(Sys.getenv("IEEGIO_PKGDOWN", unset = ""), "")) {
 # write_streamlines(x = tck, con = tfile)
 
 ## ----streamline_cleanup, echo = FALSE, results='hide'-------------------------
-# if(file.exists(tfile)) {
+# if (file.exists(tfile)) {
 #   unlink(tfile)
 # }
 
 ## ----teardown, echo=FALSE, results='hide'-------------------------------------
 # cache_dir <- tools::R_user_dir("ieegio", "cache")
-# if(file.exists(cache_dir)) {
+# if (file.exists(cache_dir)) {
 #   unlink(cache_dir, recursive = TRUE, force = TRUE)
 # }
 

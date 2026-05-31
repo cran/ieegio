@@ -406,7 +406,7 @@ example,</p>
 <span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a></span>
 <span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>ras_str <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="fu">sprintf</span>(<span class="st">&quot;%.0f&quot;</span>, ras_position), <span class="at">collapse =</span> <span class="st">&quot;,&quot;</span>)</span>
 <span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a></span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="cf">for</span>(which <span class="cf">in</span> <span class="fu">c</span>(<span class="st">&quot;coronal&quot;</span>, <span class="st">&quot;axial&quot;</span>, <span class="st">&quot;sagittal&quot;</span>)) {</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="cf">for</span> (which <span class="cf">in</span> <span class="fu">c</span>(<span class="st">&quot;coronal&quot;</span>, <span class="st">&quot;axial&quot;</span>, <span class="st">&quot;sagittal&quot;</span>)) {</span>
 <span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="fu">plot</span>(<span class="at">x =</span> volume, <span class="at">position =</span> ras_position, <span class="at">crosshair_gap =</span> <span class="dv">10</span>,</span>
 <span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>       <span class="at">crosshair_lty =</span> <span class="dv">2</span>, <span class="at">zoom =</span> <span class="dv">3</span>, <span class="at">which =</span> which,</span>
 <span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>       <span class="at">main =</span> <span class="fu">sprintf</span>(<span class="st">&quot;%s T1RAS=[%s]&quot;</span>, which, ras_str))</span>
