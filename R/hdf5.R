@@ -7,10 +7,11 @@ alternative_h5_fname <- function(file) {
   file_path(dir, fname)
 }
 
-#' Lazy Load 'HDF5' File via \code{\link[hdf5r]{hdf5r-package}}
+#' Lazy Load 'HDF5' File
 #'
 #' @description Wrapper for class \code{\link{LazyH5}}, which load data with
-#' "lazy" mode - only read part of dataset when needed.
+#' "lazy" mode - only read part of dataset when needed. The underlying
+#' 'HDF5' backend is resolved at run-time; see \code{\link{LazyH5}}.
 #'
 #' @param file 'HDF5' file
 #' @param name \code{group/data_name} path to dataset (\code{H5D} data)
@@ -64,7 +65,8 @@ io_read_h5 <- function(file, name, read_only = TRUE, ram = FALSE, quiet = FALSE)
     tmpf <- tempfile(fileext = "conflict.h5")
     file.copy(file, tmpf)
     tryCatch({
-      LazyH5$new(file_path = tmpf, data_name = name, read_only = read_only)
+      LazyH5$new(file_path = tmpf, data_name = name, read_only = read_only,
+                 quiet = quiet)
     }, error = function(e2) {
       stop(e)
     })
@@ -85,7 +87,8 @@ io_read_h5 <- function(file, name, read_only = TRUE, ram = FALSE, quiet = FALSE)
 #' @param x an array, a matrix, or a vector
 #' @param file path to 'HDF5' file
 #' @param name path/name of the data; for example, \code{"group/data_name"}
-#' @param chunk chunk size
+#' @param chunk chunk size; only honored by the \code{'hdf5r'} backend, as
+#' \code{'h5lite'} has no per-dimension chunking
 #' @param level compress level from 0 - no compression to 10 - max compression
 #' @param replace should data be replaced if exists
 #' @param new_file should removing the file if old one exists
@@ -123,7 +126,7 @@ io_write_h5 <- function(x, file, name, chunk = "auto", level = 4, replace = TRUE
   # x <- array(1:24, c(1,2,3,1,4,1))
   # ctype = "numeric"
   # quiet=FALSE
-  # Sys.setenv("IEEGIO_USE_H5PY" = "TRUE")
+  # Sys.setenv("IEEGIO_USE_H5" = "h5py")
 
   f <- tryCatch({
     f <- LazyH5$new(file, name, read_only = FALSE, quiet = quiet)
@@ -145,7 +148,7 @@ io_write_h5 <- function(x, file, name, chunk = "auto", level = 4, replace = TRUE
       unlink(tmpf)
     }
     # Otherwise it's some weird error, or dirname not exists, expose the error
-    f <- LazyH5$new(file, name, read_only = FALSE)
+    f <- LazyH5$new(file, name, read_only = FALSE, quiet = quiet)
     f$close(all = TRUE)
     f
   })
@@ -162,7 +165,8 @@ io_write_h5 <- function(x, file, name, chunk = "auto", level = 4, replace = TRUE
 #' @param mode \code{'r'} for read access and \code{'w'} for write access
 #' @param close_all whether to close all connections or just close current
 #' connection; default is false. Set this to \code{TRUE} if you want to
-#' close all other connections to the file
+#' close all other connections to the file. This only applies to the
+#' \code{'hdf5r'} backend; \code{'h5lite'} never holds the file open
 #' @returns \code{io_h5_valid} returns a logical value indicating whether the
 #' file can be opened. \code{io_h5_names} returns a character vector of
 #' dataset names.
@@ -179,20 +183,6 @@ io_write_h5 <- function(x, file, name, chunk = "auto", level = 4, replace = TRUE
 #' io_write_h5(x, f, 'dset')
 #' io_h5_valid(f, 'w')
 #'
-#' # Open the file and hold a connection
-#' ptr <- hdf5r::H5File$new(filename = f, mode = 'w')
-#'
-#' # Can read, but cannot write
-#' io_h5_valid(f, 'r')  # TRUE
-#' io_h5_valid(f, 'w')  # FALSE
-#'
-#' # However, this can be reset via `close_all=TRUE`
-#' io_h5_valid(f, 'r', close_all = TRUE)
-#' io_h5_valid(f, 'w')  # TRUE
-#'
-#' # Now the connection is no longer valid
-#' ptr
-#'
 #' # clean up
 #' unlink(f)
 #'
@@ -203,27 +193,71 @@ io_h5_valid <- function(file, mode = c("r", "w"), close_all = FALSE) {
 
   h5backend <- ensure_hdf5_backend()
 
+  backend_type <- hdf5_backend_type(h5backend)
+
   tryCatch({
-    if (inherits(h5backend, "python.builtin.module")) {
+
+    # `filearray` stores the data in `<file>.farr/`, the plain path never exists
+    if (backend_type != "filearray") {
       file <- normalizePath(file, mustWork = TRUE)
-      if (mode == "w") {
-        mode <- "r+"
-      }
-      ptr <- h5backend$File(file, mode = mode)
-      ptr$close()
-    } else if (isNamespace(h5backend)) {
-      file <- normalizePath(file, mustWork = TRUE)
-      f <- hdf5r::H5File$new(filename = file, mode = mode)
-      if (close_all) {
-        f$close_all()
-      } else {
-        f$close()
-      }
-    } else {
-      # HDF5 not available, using filearray
-      stopifnot(dir_exists(alternative_h5_fname(file)))
     }
 
+    switch(
+      backend_type,
+      "h5py" = {
+        if (mode == "w") {
+          mode <- "r+"
+        }
+        ptr <- h5backend$File(file, mode = mode)
+        ptr$close()
+      },
+      "hdf5r" = {
+        # `hdf5r`'s "w" is `H5F_ACC_TRUNC`: it would erase the very file this
+        # function is only supposed to ask about. "r+" is read/write on an
+        # existing file, which is the same substitution the `h5py` branch makes.
+        if (mode == "w") {
+          mode <- "r+"
+        }
+        # f <- hdf5r::H5File$new(filename = file, mode = mode)
+        f <- h5backend$H5File$new(filename = file, mode = mode)
+
+        if (close_all) {
+          f$close_all()
+        } else {
+          f$close()
+        }
+      },
+      "filearray" = {
+        # HDF5 not available, using filearray
+        stopifnot(dir_exists(alternative_h5_fname(file)))
+      },
+      "h5lite" = {
+        h5backend$h5_exists(file = file, name = "/", assert = TRUE)
+        if (mode == "w") {
+          # `h5_open` creates the root group, hence it fails when the file
+          # cannot be written to
+          ptr <- h5backend$h5_open(file)
+          ptr$close()
+        }
+        # `close_all` is a no-op here: h5lite does not hold the file open
+      },
+      "readNSx" = {
+        return(
+          # Valid file?
+          h5backend$h5FileValid(file) && (
+            # yes, then
+            # read-only?
+            mode == "r" ||
+
+              # write mode, writable?
+              h5backend$h5_writable(file)
+          )
+        )
+      },
+      {
+        stop("Invalid HDF5 backend: ", backend_type)
+      }
+    )
     TRUE
   }, error = function(e) {
     FALSE
@@ -238,57 +272,91 @@ io_h5_valid <- function(file, mode = c("r", "w"), close_all = FALSE) {
 io_h5_names <- function(file) {
   # make sure the file is valid
   if (!io_h5_valid(file, "r")) { return(FALSE) }
-  file <- normalizePath(file, mustWork = TRUE)
 
   h5backend <- ensure_hdf5_backend()
+  backend_type <- hdf5_backend_type(h5backend)
 
-  if (inherits(h5backend, "python.builtin.module")) {
-    ptr <- h5backend$File(file, mode = "r")
-    on.exit({
-      tryCatch({
-        ptr$close()
-      }, error = function(e) {})
-    })
-
-    rpymat <- asNamespace("rpymat")
-    group_classes <- rpymat$py_tuple(h5backend$File, h5backend$Group)
-
-    iter_func <- function(x, ...) {
-      if (inherits(x, "python.builtin.object")) {
-        name <- py_to_r(x[0L])
-        item <- x[1L]
-      } else {
-        name <- x[[1]]
-        item <- x[[2]]
-      }
-
-      if (py_isinstance(item, h5backend$Dataset)) {
-        return(name)
-      }
-
-      if (py_isinstance(item, group_classes)) {
-        re <- rpymat$run_package_function(
-          "reticulate", "iterate", item$items(), iter_func,
-          simplify = FALSE)
-        return(unique(sprintf("%s/%s", name, unlist(re))))
-      }
-      return(character())
-    }
-
-    names <- iter_func(list("", ptr))
-
-    ptr$close()
-
-    names <- gsub("^[/]+", "", names)
-  } else if (isNamespace(h5backend)) {
-    f <- hdf5r::H5File$new(filename = file, mode = "r")
-    on.exit({ f$close() })
-    names <- hdf5r::list.datasets(f)
-  } else {
-    names <- list.dirs(alternative_h5_fname(file), recursive = TRUE, full.names = FALSE)
-    names <- gsub("^[/\\\\]+", "", names)
-    names <- gsub("[/\\\\]+", "/", names)
+  # `filearray` stores the data in `<file>.farr/`, the plain path never exists
+  if (backend_type != "filearray") {
+    file <- normalizePath(file, mustWork = TRUE)
   }
 
-  names
+  names <- switch(
+    backend_type,
+    "h5py" = {
+      ptr <- h5backend$File(file, mode = "r")
+      on.exit({
+        tryCatch({
+          ptr$close()
+        }, error = function(e) {})
+      })
+
+      rpymat <- asNamespace("rpymat")
+      group_classes <- rpymat$py_tuple(h5backend$File, h5backend$Group)
+
+      iter_func <- function(x, ...) {
+        if (inherits(x, "python.builtin.object")) {
+          name <- py_to_r(x[0L])
+          item <- x[1L]
+        } else {
+          name <- x[[1]]
+          item <- x[[2]]
+        }
+
+        if (py_isinstance(item, h5backend$Dataset)) {
+          return(name)
+        }
+
+        if (py_isinstance(item, group_classes)) {
+          re <- rpymat$run_package_function(
+            "reticulate", "iterate", item$items(), iter_func,
+            simplify = FALSE)
+          return(unique(sprintf("%s/%s", name, unlist(re))))
+        }
+        return(character())
+      }
+
+      names <- iter_func(list("", ptr))
+
+      ptr$close()
+
+      names <- gsub("^[/]+", "", names)
+      names
+    },
+    "hdf5r" = {
+      # f <- hdf5r::H5File$new(filename = file, mode = "r")
+      f <- h5backend$H5File$new(filename = file, mode = "r")
+
+      on.exit({ f$close() })
+      # names <- hdf5r::list.datasets(f)
+      names <- h5backend$list.datasets(f)
+
+      names
+    },
+    "filearray" = {
+      names <- list.dirs(alternative_h5_fname(file), recursive = TRUE, full.names = FALSE)
+      names <- gsub("^[/\\\\]+", "", names)
+      names <- gsub("[/\\\\]+", "/", names)
+      names
+    },
+    "h5lite" = {
+      names <- h5backend$h5_ls(file, full.names = TRUE, recursive = TRUE)
+      names <- names[vapply(names, function(nm) {
+        h5backend$h5_is_dataset(file, name = nm)
+      }, FALSE)]
+      names <- gsub("^[/\\\\]+", "", names)
+      names <- gsub("[/\\\\]+", "/", names)
+      names
+    },
+    "readNSx" = {
+      h5backend$h5_names(file = file)
+    },
+    {
+      stop("Invalid HDF5 backend: ", backend_type)
+    }
+  )
+
+  # `hdf5r` and `readNSx` list datasets in name order while `h5lite` lists them
+  # in insertion order; sort so the backends agree
+  sort(names)
 }

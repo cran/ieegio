@@ -15,7 +15,7 @@ read_surface(file, format = "auto", type = NULL, ...)
 write_surface(
   x,
   con,
-  format = c("gifti", "freesurfer"),
+  format = c("gifti", "freesurfer", "vtk"),
   type = c("geometry", "annotations", "measurements", "color", "time_series"),
   ...,
   name = 1
@@ -36,8 +36,10 @@ io_write_gii(x, con, ...)
 \arguments{
 \item{file, con}{path the file}
 
-\item{format}{format of the file, for \code{write_surface}, this is either
-\code{'gifti'} or \code{'freesurfer'}; for \code{read_surface}, see
+\item{format}{format of the file, for \code{write_surface}, this is
+\code{'gifti'}, \code{'freesurfer'}, or \code{'vtk'}; for
+\code{read_surface}, use \code{'niml'} to force the \verb{NIML} reader, or
+see
 'Arguments' section in \code{\link[freesurferformats]{read.fs.surface}}
 (when file type is \code{'geometry'}) and
 \code{\link[freesurferformats]{read.fs.curv}}
@@ -55,10 +57,17 @@ brain atlas;}
 \item{\code{'measurements'}}{measurement file such as \code{'sulc'} and
 \code{'curv'} files, containing numerical values (often with continuous
 domain) for each vertex node}
-}}
+}
+For \verb{AFNI}/\verb{SUMA} \verb{NIML} files (file name ending with
+\code{'.niml.dset'}), the type is resolved automatically from the dataset
+when left unspecified: datasets whose \verb{dset_type} denotes labels or
+regions of interest, or that carry an \verb{AFNI_labeltable}, are read as
+\code{'annotations'}; the rest are read as \code{'measurements'}. See
+\code{\link{io_read_niml}} for the low-level reader.}
 
 \item{...}{for \code{read_surface}, the arguments will be passed to
-\code{io_read_fs} if the file is a 'FreeSurfer' file.}
+\code{io_read_fs} if the file is a 'FreeSurfer' file, or to
+\code{\link{io_read_vtk_polys}} if the file is a \code{'VTK'} mesh.}
 
 \item{x}{surface (geometry, annotation, measurement) data}
 

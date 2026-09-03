@@ -1,11 +1,13 @@
 Package: ieegio
 Title: File IO for Intracranial Electroencephalography
-Version: 0.1.0
+Version: 0.1.2
 Language: en-US
 Encoding: UTF-8
 Authors@R: 
     person(
-        "Zhengjia", "Wang", , "dipterix.wang@gmail.com",
+        given = "Zhengjia", 
+        family = "Wang", 
+        email = "dipterix.wang@gmail.com",
         role = c("aut", "cre"),
         comment = c(ORCID = "0000-0001-5629-1116")
     )
@@ -17,18 +19,19 @@ BugReports: https://github.com/dipterix/ieegio/issues
 License: MIT + file LICENSE
 Imports: data.table (>= 1.16.0), digest, fastmap, filearray (>= 0.1.8),
         freesurferformats, fs, fst (>= 0.9.0), gifti (>= 0.8.0),
-        grDevices, hdf5r, jsonlite, oro.nifti, R.matlab (>= 3.7.0), R6,
-        readNSx (>= 0.0.5), rpyANTs (>= 0.0.3), stringr, utils, yaml
-Suggests: reticulate, ravetools, rgl, RNifti (>= 1.7.0), rpymat (>=
-        0.1.7), xml2, knitr, r3js, rmarkdown, tools, testthat (>=
+        grDevices, jsonlite, oro.nifti, R.matlab (>= 3.7.0), R6,
+        readNSx (>= 0.0.5), rpyANTs (>= 0.0.3), stats, stringr, utils,
+        yaml
+Suggests: h5lite, reticulate, ravetools, rgl, RNifti (>= 1.7.0), rpymat
+        (>= 0.1.7), xml2, knitr, r3js, rmarkdown, tools, testthat (>=
         3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.0
 NeedsCompilation: no
-Packaged: 2026-05-31 02:36:59 UTC; dipterix
+Packaged: 2026-09-02 17:43:58 UTC; dipterix
 Author: Zhengjia Wang [aut, cre] (ORCID:
     <https://orcid.org/0000-0001-5629-1116>)
 Maintainer: Zhengjia Wang <dipterix.wang@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-05-31 05:12:01 UTC
+Date/Publication: 2026-09-03 08:10:11 UTC

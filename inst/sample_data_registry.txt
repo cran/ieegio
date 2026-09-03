@@ -7,6 +7,8 @@ brainvis.vmrk
 edfPlusD.edf
 atlases/YBA/YBA690.nii.gz
 atlases/YBA/YBA_690_parcel_dict.csv
+atlases/YBA/YBA696.nii.gz
+atlases/YBA/YBA_696_parcel_dict.csv
 nifti/rnifti_example.nii.gz
 nifti/rnifti_example_rgb.nii.gz
 nifti/rnifti_example_4d.nii.gz
@@ -26,11 +28,17 @@ gifti/icosahedron3d/geometry.gii
 gifti/icosahedron3d/rand.curv
 gifti/icosahedron3d/rand.gii
 gifti/icosahedron3d/ts.gii
+gifti/std.141.lh.inf_200.gii
+gifti/std.141.rh.inf_200.gii
 streamlines/CNVII_R.tck
 streamlines/CNVII_R.trk.gz
 streamlines/CNVII_R.trk
 streamlines/CNVII_R.tt
 streamlines/CNVII_R.tt.gz
+niml/HCP.L_Anterior_Agranular_Insula_Complex.k112.niml.dset
+niml/HCP.L_Anterior_Ventral_Insular_Area.k111.niml.dset
+niml/rh.std.141.Glasser_HCP.lbl.niml.dset
+niml/std.141.lh.aparc.a2009s.annot.niml.dset
 mat_v73.mat
 nwb_sample.nwb
 placeholder

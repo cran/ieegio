@@ -49,6 +49,17 @@ if (identical(Sys.getenv("IEEGIO_PKGDOWN", unset = ""), "")) {
 # 
 # tt_file <- ieegio_sample_data(
 #   "streamlines/CNVII_R.tt")
+# 
+# # AFNI/SUMA std.141 geometry and matching annotation
+# std141_geom_file <- ieegio_sample_data(
+#   "gifti/std.141.lh.inf_200.gii")
+# 
+# niml_file <- ieegio_sample_data(
+#   "niml/std.141.lh.aparc.a2009s.annot.niml.dset")
+# 
+# # volumetric atlas
+# atlas_file <- ieegio_sample_data(
+#   "atlases/YBA/YBA690.nii.gz")
 
 ## ----read_volume--------------------------------------------------------------
 # volume <- read_volume(nifti_file)
@@ -129,6 +140,52 @@ if (identical(Sys.getenv("IEEGIO_PKGDOWN", unset = ""), "")) {
 # if (file.exists(tfile)) {
 #   unlink(tfile)
 # }
+
+## ----read_niml----------------------------------------------------------------
+# std141_geometry <- read_surface(std141_geom_file)
+# 
+# annotation <- read_surface(niml_file)
+# annotation
+
+## ----merge_niml---------------------------------------------------------------
+# labeled <- merge(std141_geometry, annotation)
+# labeled
+
+## ----plot_niml, fig.width=7, fig.height=4, out.width="95%"--------------------
+# plot(labeled, name = "annotations")
+
+## ----roi_describe-------------------------------------------------------------
+# atlas <- read_volume(atlas_file)
+# 
+# # describe: which voxels count as the region
+# roi <- as_ieegio_roi(atlas, threshold_lb = 1, threshold_ub = 5)
+# roi
+
+## ----roi_resolve--------------------------------------------------------------
+# # compute: turn that description into geometry
+# resolve_roi_as(roi, "pointcloud")
+
+## ----roi_overlap--------------------------------------------------------------
+# overlap <- detect_roi_overlap(
+#   as_ieegio_roi(atlas, threshold_lb = 1),
+#   trk,
+#   radius = 2
+# )
+# overlap
+
+## ----volume_to_surface--------------------------------------------------------
+# volume_to_surface(atlas, threshold_lb = 1, threshold_ub = 5)
+
+## ----spaces-------------------------------------------------------------------
+# mni <- new_space("MNI152", orientation = "RAS")
+# mni
+# 
+# surface_to_surface(
+#   geometry,
+#   space_from = "scanner",
+#   space_to = mni,
+#   transform = diag(1, 4)
+# )
 
 ## ----teardown, echo=FALSE, results='hide'-------------------------------------
 # cache_dir <- tools::R_user_dir("ieegio", "cache")

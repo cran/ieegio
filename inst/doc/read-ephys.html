@@ -370,6 +370,9 @@ method.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># get Channel 1</span></span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>channel <span class="ot">&lt;-</span> edf<span class="sc">$</span><span class="fu">get_channel</span>(<span class="dv">1</span>)</span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>channel</span></code></pre></div>
+<p>A channel can also be looked up by its label instead of its number,
+which saves a round trip through the channel table:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>edf<span class="sc">$</span><span class="fu">get_channel</span>(<span class="st">&quot;squarewave&quot;</span>)</span></code></pre></div>
 <p>The <code>channel</code> contains the following elements:</p>
 <ul>
 <li><code>type</code>: a character indicating the original file
@@ -386,12 +389,39 @@ converted from digital to analog trace.</li>
 </ul>
 <p>Using such information, it is straightforward to plot the channel
 data:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">plot</span>(</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">x =</span> channel<span class="sc">$</span>time, <span class="at">y =</span> channel<span class="sc">$</span>value,</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">xlab =</span> <span class="st">&quot;Time&quot;</span>, <span class="at">ylab =</span> channel<span class="sc">$</span>info<span class="sc">$</span>Unit,</span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">main =</span> channel<span class="sc">$</span>info<span class="sc">$</span>Label,</span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;p&quot;</span>, <span class="at">pch =</span> <span class="st">&quot;.&quot;</span>, <span class="at">col =</span> <span class="st">&quot;green&quot;</span>, <span class="at">lwd =</span> <span class="dv">2</span></span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">plot</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="at">x =</span> channel<span class="sc">$</span>time, <span class="at">y =</span> channel<span class="sc">$</span>value,</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="at">xlab =</span> <span class="st">&quot;Time&quot;</span>, <span class="at">ylab =</span> channel<span class="sc">$</span>info<span class="sc">$</span>Unit,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="at">main =</span> channel<span class="sc">$</span>info<span class="sc">$</span>Label,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;p&quot;</span>, <span class="at">pch =</span> <span class="st">&quot;.&quot;</span>, <span class="at">col =</span> <span class="st">&quot;green&quot;</span>, <span class="at">lwd =</span> <span class="dv">2</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>)</span></code></pre></div>
+<div id="writing-edf-files" class="section level2">
+<h2>Writing <code>EDF</code> files</h2>
+<p>To save signals back out, build each channel with
+<code>as_edf_channel</code> and hand the list to <code>write_edf</code>.
+A channel is either a signal vector or an annotation table:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>signal <span class="ot">&lt;-</span> <span class="fu">sin</span>(<span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">10</span>, <span class="at">by =</span> <span class="fl">0.01</span>))</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>channels <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="fu">as_edf_channel</span>(signal, <span class="at">channel_num =</span> <span class="dv">1</span>,</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>                 <span class="at">sample_rate =</span> <span class="dv">200</span>, <span class="at">label =</span> <span class="st">&quot;sine&quot;</span>),</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>  <span class="fu">as_edf_channel</span>(</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>    <span class="fu">data.frame</span>(</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>      <span class="at">timestamp =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">5</span>),</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>      <span class="at">comments =</span> <span class="fu">c</span>(<span class="st">&quot;start&quot;</span>, <span class="st">&quot;end&quot;</span>)</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>    ),</span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>    <span class="at">channel_num =</span> <span class="dv">2</span></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>  )</span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>)</span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a></span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a>out_path <span class="ot">&lt;-</span> <span class="fu">tempfile</span>(<span class="at">fileext =</span> <span class="st">&quot;.edf&quot;</span>)</span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a><span class="fu">write_edf</span>(<span class="at">channels =</span> channels, <span class="at">con =</span> out_path)</span></code></pre></div>
+<p>Reading it back gives the signal and the annotations:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>written <span class="ot">&lt;-</span> <span class="fu">read_edf</span>(out_path, <span class="at">extract_path =</span> <span class="fu">tempfile</span>(), <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>written<span class="sc">$</span><span class="fu">get_channel</span>(<span class="st">&quot;sine&quot;</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>written<span class="sc">$</span><span class="fu">get_annotations</span>()</span></code></pre></div>
+</div>
 
 
 

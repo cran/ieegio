@@ -40,6 +40,9 @@ if (identical(Sys.getenv("IEEGIO_PKGDOWN", unset = ""), "")) {
 # channel <- edf$get_channel(1)
 # channel
 
+## ----get_channel_label--------------------------------------------------------
+# edf$get_channel("squarewave")
+
 ## ----plot_channel-------------------------------------------------------------
 # plot(
 #   x = channel$time, y = channel$value,
@@ -47,6 +50,34 @@ if (identical(Sys.getenv("IEEGIO_PKGDOWN", unset = ""), "")) {
 #   main = channel$info$Label,
 #   type = "p", pch = ".", col = "green", lwd = 2
 # )
+
+## ----write_edf----------------------------------------------------------------
+# signal <- sin(seq(0, 10, by = 0.01))
+# 
+# channels <- list(
+#   as_edf_channel(signal, channel_num = 1,
+#                  sample_rate = 200, label = "sine"),
+# 
+#   as_edf_channel(
+#     data.frame(
+#       timestamp = c(0, 5),
+#       comments = c("start", "end")
+#     ),
+#     channel_num = 2
+#   )
+# )
+# 
+# out_path <- tempfile(fileext = ".edf")
+# write_edf(channels = channels, con = out_path)
+
+## ----write_edf_verify---------------------------------------------------------
+# written <- read_edf(out_path, extract_path = tempfile(), verbose = FALSE)
+# written$get_channel("sine")
+# written$get_annotations()
+
+## ----write_edf_cleanup, echo = FALSE, results='hide'--------------------------
+# written$delete()
+# unlink(out_path)
 
 ## ----teardown, echo=FALSE, results='hide'-------------------------------------
 # cache_dir <- tools::R_user_dir("ieegio", "cache")

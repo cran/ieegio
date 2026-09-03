@@ -16,7 +16,8 @@ io_h5_names(file)
 
 \item{close_all}{whether to close all connections or just close current
 connection; default is false. Set this to \code{TRUE} if you want to
-close all other connections to the file}
+close all other connections to the file. This only applies to the
+\code{'hdf5r'} backend; \code{'h5lite'} never holds the file open}
 }
 \value{
 \code{io_h5_valid} returns a logical value indicating whether the
@@ -37,20 +38,6 @@ io_h5_valid(f, 'r')
 
 io_write_h5(x, f, 'dset')
 io_h5_valid(f, 'w')
-
-# Open the file and hold a connection
-ptr <- hdf5r::H5File$new(filename = f, mode = 'w')
-
-# Can read, but cannot write
-io_h5_valid(f, 'r')  # TRUE
-io_h5_valid(f, 'w')  # FALSE
-
-# However, this can be reset via `close_all=TRUE`
-io_h5_valid(f, 'r', close_all = TRUE)
-io_h5_valid(f, 'w')  # TRUE
-
-# Now the connection is no longer valid
-ptr
 
 # clean up
 unlink(f)

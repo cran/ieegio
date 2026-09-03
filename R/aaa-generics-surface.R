@@ -932,6 +932,7 @@ plot.ieegio_surface <- function(
     col <- col[[length(col)]]
   }
 
+  cpar <- graphics::par("mfrow", "mar", "cex")
 
   if (name[[1]] == "time") {
     n_slices <- length(slice_index)
@@ -941,6 +942,8 @@ plot.ieegio_surface <- function(
 
       oldpar <- graphics::par(mfrow = mfr, mar = c(0, 0, 0, 0))
       on.exit({ graphics::par(oldpar) }, add = TRUE)
+
+      oldpar <- cpar
 
       ravetools <- asNamespace("ravetools")
       plot_mesh_polygon <- ravetools$plot_mesh_polygon
@@ -1066,7 +1069,9 @@ plot.ieegio_surface <- function(
                          heights = c(graphics::lcm(1), 1))
 
         oldpar <- graphics::par("mfrow", mar = c(0.0, 3.1, 0.0, 0.5))
-        on.exit({ graphics::par(oldpar) })
+        on.exit({ graphics::par(oldpar) }, add = TRUE)
+
+        oldpar <- cpar
 
         graphics::plot.new()
         graphics::plot.window(c(0, 1), c(0, 1))
@@ -1084,7 +1089,6 @@ plot.ieegio_surface <- function(
 
         args$eye <- c(0, -1000, 0)
         args$up <- c(0, 0, 1)
-        args$main <- main
         plot_range <- do.call(plot_mesh_polygon, args)
         graphics::axis(1L, at = plot_range$xlim, labels = c("Left", "Right"))
         graphics::axis(2L, at = plot_range$ylim, labels = c("Inferior", "Superior"))
@@ -1152,8 +1156,16 @@ plot.ieegio_surface <- function(
 #' \code{'curv'} files, containing numerical values (often with continuous
 #' domain) for each vertex node}
 #' }
-#' @param format format of the file, for \code{write_surface}, this is either
-#' \code{'gifti'} or \code{'freesurfer'}; for \code{read_surface}, see
+#' For \verb{AFNI}/\verb{SUMA} \verb{NIML} files (file name ending with
+#' \code{'.niml.dset'}), the type is resolved automatically from the dataset
+#' when left unspecified: datasets whose \verb{dset_type} denotes labels or
+#' regions of interest, or that carry an \verb{AFNI_labeltable}, are read as
+#' \code{'annotations'}; the rest are read as \code{'measurements'}. See
+#' \code{\link{io_read_niml}} for the low-level reader.
+#' @param format format of the file, for \code{write_surface}, this is
+#' \code{'gifti'}, \code{'freesurfer'}, or \code{'vtk'}; for
+#' \code{read_surface}, use \code{'niml'} to force the \verb{NIML} reader, or
+#' see
 #' 'Arguments' section in \code{\link[freesurferformats]{read.fs.surface}}
 #' (when file type is \code{'geometry'}) and
 #' \code{\link[freesurferformats]{read.fs.curv}}
@@ -1163,7 +1175,8 @@ plot.ieegio_surface <- function(
 #' argument can be an integer or a character, representing the
 #' index or name of the corresponding measurement or annotation column.
 #' @param ... for \code{read_surface}, the arguments will be passed to
-#' \code{io_read_fs} if the file is a 'FreeSurfer' file.
+#' \code{io_read_fs} if the file is a 'FreeSurfer' file, or to
+#' \code{\link{io_read_vtk_polys}} if the file is a \code{'VTK'} mesh.
 #' @returns A surface object container for \code{read_surface}, and
 #' the file path for \code{write_surface}
 #' @examples
@@ -1207,10 +1220,27 @@ plot.ieegio_surface <- function(
 #' @export
 read_surface <- function(file, format = "auto", type = NULL, ...) {
   fname <- basename(file)
-  if (endsWith(tolower(fname), "gii") || endsWith(tolower(fname), "gii.gz") ||
-     tolower(format) %in% c("gii", "gifti", "gii.gz")) {
+  fname_lc <- tolower(fname)
+  format_lc <- tolower(format)
+
+  if (endsWith(fname_lc, "gii") || endsWith(fname_lc, "gii.gz") ||
+     format_lc %in% c("gii", "gifti", "gii.gz")) {
     # GIfTI
     return(io_read_gii(file))
+  }
+  if (grepl("\\.niml\\.dset$", fname_lc) ||
+     format_lc %in% c("niml", "niml.dset")) {
+    # AFNI/SUMA NIML dataset; `path_ext` reports "dset" here, so the full
+    # ".niml.dset" suffix is what identifies the format
+    return(niml_as_surface(file, type = type, name = fname))
+  }
+  vtk_formats <- c("vtk", "vtp", "pvtp", "vtu", "vtpb")
+  if (format_lc %in% vtk_formats ||
+     (format_lc %in% c("auto", "") &&
+      tolower(path_ext(fname)) %in% vtk_formats)) {
+    # VTK polygon mesh; explicitly specified `format` takes precedence over
+    # the file extension
+    return(io_read_vtk_polys(file, ...))
   }
   if (!length(type)) {
     # Guess the type
@@ -1234,17 +1264,27 @@ read_surface <- function(file, format = "auto", type = NULL, ...) {
 #' @rdname imaging-surface
 #' @export
 write_surface <- function(
-    x, con, format = c("gifti", "freesurfer"),
+    x, con, format = c("gifti", "freesurfer", "vtk"),
     type = c("geometry", "annotations", "measurements", "color",
              "time_series"),
     ..., name = 1) {
 
+  # infer VTK format from the file name when `format` is not explicitly given
+  if (missing(format) &&
+     grepl("\\.(vtk|vtp|pvtp|vtpb)$", tolower(con))) {
+    format <- "vtk"
+  }
   format <- match.arg(format)
   x <- as_ieegio_surface(x)
 
 
   if (format == "gifti") {
     re <- io_write_gii(x = x, con = con, ...)
+    return(invisible(re))
+  }
+
+  if (format == "vtk") {
+    re <- io_write_vtk_polys(x = x, con = con, ...)
     return(invisible(re))
   }
 
