@@ -1,13 +1,13 @@
-cbfb4833e7fe89b93e460a67f00d4630 *DESCRIPTION
+d0e15d2a29ba10f7b49c753e68647c5e *DESCRIPTION
 16e321a582f9f14c2d9d7717d4ba4634 *LICENSE
 bccbe5d6147543b64d65323ba9376572 *NAMESPACE
-71bdf64aeb77f4e09d80b38c89ebc1d8 *NEWS.md
+b79989dc1741f041d3bc871675b85fc4 *NEWS.md
 b9d4fc2275aa5c1ab377dffd8c1ec96b *R/LazyFST-class.R
 e2d3dd1e74bcb063d793b00adf0e181b *R/aaa-000.R
 2f7eed92c383c3d7aae041ee120309a8 *R/aaa-cache.R
 bdcb8682b1212bb6469507d38fe2de5e *R/aaa-docs.R
 ecbce3ff9048dad64bea666c4b64f465 *R/aaa-generics-colormap.R
-53322f9dad35e65db71ee32ca26e31ec *R/aaa-generics-streamlines.R
+79ff7f9a267120380370458f095f7438 *R/aaa-generics-streamlines.R
 660bea82283b4a111cd1d415fe6e02f0 *R/aaa-generics-surface.R
 a09c6aea48fd8314c99627cdd412e16e *R/aaa-generics-volume.R
 73c9524517bf0a326adb53f9a8de9604 *R/as_ieegio_roi.R
@@ -56,7 +56,7 @@ c4a71a2caeab3eb2d3d89b6de7d8cefe *R/stl.R
 c965d0796073222220b60bc880d2a68e *R/trk.R
 f30af62558bd179cef299ca1cc948854 *R/tt.R
 65e3b22f37e30d12fe2eadc292da1831 *R/utils-surf2surf.R
-2bca0a0d630abccc43f1e7def6dcd12f *R/utils-vol2surf.R
+acabeb350eb63929bac9f46b357ac129 *R/utils-vol2surf.R
 0be605cd7fccd5a809db7f3d808b4db0 *R/utils-vol2surf_atlas.R
 a2fc9f0621a4799a62730532af7748c1 *R/vtk.R
 6d8ace2c2f0575abfaefb4a1c1349fd2 *R/xml.R
@@ -140,7 +140,7 @@ a19c014345580a5355526423134b5f8a *man/resolve_roi_as.Rd
 5586922f54ac0fc7c54a1219409c6a29 *man/surface_to_surface.Rd
 61efc81c95acd946feec0e0eb6c3b1d9 *man/transform_flirt2ras.Rd
 d01157cb4dea5ffb06156f91abc159db *man/transform_orientation.Rd
-3131617689cb4cd73ddd8d0bee1fa08a *man/volume_to_surface.Rd
+ee3407c59ea047301d599b077b2318a1 *man/volume_to_surface.Rd
 6e384d1c708ba043faf1bfd7029b0249 *man/write_colormap.Rd
 83f5f775a93472a7af806a7c547c33bf *man/write_edf.Rd
 7c0311772bb8f4fc0bc9af013b325a42 *tests/testthat.R
@@ -162,7 +162,8 @@ d07eb609f808f08007cd80488ae3274b *tests/testthat/test-space.R
 16d9ce45ff71f79e670a8f384c290634 *tests/testthat/test-transform-chain.R
 2e64db781fe02c145eea0ca5ae37e5e4 *tests/testthat/test-transform.R
 69ea2d81479ce809ed9bda5a8b3fdab6 *tests/testthat/test-trk.R
+17dab2eace7dee98917310a0d1ced4d4 *tests/testthat/test-volume-to-surface.R
 72399f5361854009079f69b516fc5fee *tests/testthat/test-volume.R
-fa749206df0aca29f8fa4d3d02f9c0c4 *tests/testthat/test-vtk-polys.R
+25dc45e7406ea5c03ee4881f590a7830 *tests/testthat/test-vtk-polys.R
 e1113162cca82bc497969a96b1594309 *vignettes/read-ephys.Rmd
 d57bf4d9dec5b6acdaafb4a086c19658 *vignettes/read-imaging-data.Rmd
